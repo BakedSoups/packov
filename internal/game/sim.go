@@ -160,6 +160,7 @@ func (r *RunState) Step(c *Catalog) {
 	r.updatePlayers(c, dt)
 	r.updateAI(c, dt)
 	r.integrate(dt)
+	r.resolveEntitySeparation()
 	r.resolveCombat(c)
 	r.updateExtraction(c)
 	r.updateRunOutcome()
@@ -268,10 +269,23 @@ func (r *RunState) updateAI(c *Catalog, dt float64) {
 				continue
 			}
 			def := c.EnemyByID[e.DefID]
-			if Dist(e.Position, target.Position) < def.Sense {
-				dir := target.Position.Sub(e.Position).Normalize()
-				e.Velocity = dir.Mul(def.Speed)
-				e.Rotation = Angle(dir)
+			offset := target.Position.Sub(e.Position)
+			dist := offset.Len()
+			if dist < def.Sense {
+				dir := offset.Normalize()
+				preferred := e.Radius + target.Radius + 18
+				desired := dir.Mul(def.Speed)
+				if dist < preferred {
+					desired = dir.Mul(-def.Speed * 0.45)
+				} else if dist < preferred+70 {
+					desired = desired.Mul(0.35)
+				}
+				strafe := V(-dir.Y, dir.X).Mul(math.Sin(float64(r.Tick)*0.045+float64(e.ID)) * def.Speed * 0.28)
+				separation := r.enemySeparation(e).Mul(def.Speed * 1.4)
+				e.Velocity = desired.Add(strafe).Add(separation).Clamp(def.Speed * 1.35)
+				if e.Velocity.Len2() > 0.01 {
+					e.Rotation = Angle(e.Velocity)
+				}
 			}
 		case EntityBoss:
 			target := r.closestPlayer(e.Position)
@@ -317,6 +331,65 @@ func (r *RunState) integrate(dt float64) {
 		e.Position.Y = math.Max(0, math.Min(r.Map.Size.Y, e.Position.Y))
 		if e.Kind == EntityBullet || e.Kind == EntityDrone || e.Kind == EntityTurret {
 			e.TTL -= dt
+		}
+	}
+}
+
+func (r *RunState) enemySeparation(e *Entity) Vec2 {
+	force := Vec2{}
+	for _, other := range r.Entities {
+		if other.ID == e.ID || other.Kind != EntityEnemy {
+			continue
+		}
+		minDist := e.Radius + other.Radius + 10
+		delta := e.Position.Sub(other.Position)
+		dist := delta.Len()
+		if dist >= minDist {
+			continue
+		}
+		if dist <= 0.001 {
+			delta = FromAngle(float64(e.ID%17) * 0.77)
+			dist = 0.001
+		}
+		force = force.Add(delta.Normalize().Mul((minDist - dist) / minDist))
+	}
+	return force.Clamp(1)
+}
+
+func (r *RunState) resolveEntitySeparation() {
+	entities := make([]*Entity, 0, len(r.Entities))
+	for _, e := range r.Entities {
+		if e.Kind == EntityEnemy || e.Kind == EntityBoss {
+			entities = append(entities, e)
+		}
+	}
+	for i := 0; i < len(entities); i++ {
+		for j := i + 1; j < len(entities); j++ {
+			a := entities[i]
+			b := entities[j]
+			minDist := a.Radius + b.Radius + 2
+			delta := a.Position.Sub(b.Position)
+			dist := delta.Len()
+			if dist >= minDist {
+				continue
+			}
+			if dist <= 0.001 {
+				delta = FromAngle(float64((a.ID+b.ID)%23) * 0.61)
+				dist = 0.001
+			}
+			push := delta.Normalize().Mul((minDist - dist) * 0.5)
+			if a.Kind == EntityBoss {
+				b.Position = b.Position.Sub(push.Mul(2))
+			} else if b.Kind == EntityBoss {
+				a.Position = a.Position.Add(push.Mul(2))
+			} else {
+				a.Position = a.Position.Add(push)
+				b.Position = b.Position.Sub(push)
+			}
+			a.Position.X = math.Max(0, math.Min(r.Map.Size.X, a.Position.X))
+			a.Position.Y = math.Max(0, math.Min(r.Map.Size.Y, a.Position.Y))
+			b.Position.X = math.Max(0, math.Min(r.Map.Size.X, b.Position.X))
+			b.Position.Y = math.Max(0, math.Min(r.Map.Size.Y, b.Position.Y))
 		}
 	}
 }

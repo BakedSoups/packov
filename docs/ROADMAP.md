@@ -119,14 +119,15 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [x] Add explicit loss screen explaining carried loot loss and retained progression.
 - [ ] Add PvP extraction opt-in zones and anti-grief rules.
 - [ ] Add enemy director with heat, noise, and extraction-response budgets.
-- [ ] Improve enemy steering with separation, soft attack ranges, and deterministic organic movement so enemies do not stack or overlap.
+- [x] Improve enemy steering with separation, soft attack ranges, and deterministic organic movement so enemies do not stack or overlap.
 
 ## Milestone 8A: Combat Feel and Failure Polish
 
 - [ ] Add hit flashes, damage numbers, and better death feedback.
 - [ ] Add downed/revive state for co-op before full squad failure.
 - [ ] Add failure reason text: downed, extraction missed, disconnect timeout, or objective failed.
-- [ ] Add enemy flocking and local avoidance tuning per enemy archetype.
+- [x] Add enemy flocking and local avoidance foundation.
+- [ ] Tune local avoidance per enemy archetype.
 - [ ] Add spawn director rules that avoid unfair spawns directly on top of players.
 - [ ] Add post-run stat breakdown: kills, boss damage, mined resources, loot lost, loot extracted, credits earned.
 - [ ] Add spectator camera after death in co-op runs.

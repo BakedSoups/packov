@@ -1,6 +1,9 @@
 package game
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func TestCraftConsumesComponents(t *testing.T) {
 	a := NewAccount("p1", "pilot")
@@ -75,4 +78,60 @@ func TestExtractedRunCompletesWithCarriedLootIntactForSettlement(t *testing.T) {
 	if ps.Carried.Items["alien_alloy"] != 2 {
 		t.Fatalf("extracted carried loot must remain for settlement: %+v", ps.Carried.Items)
 	}
+}
+
+func TestEnemySeparationResolvesOverlap(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("separation", c, "verdant", 42)
+	def := c.EnemyByID["skitter"]
+	r.spawnEnemy(def, V(500, 500))
+	r.spawnEnemy(def, V(500, 500))
+	before := enemyMinDistance(r)
+	r.resolveEntitySeparation()
+	after := enemyMinDistance(r)
+	if after <= before {
+		t.Fatalf("expected separation to increase min distance, before %.2f after %.2f", before, after)
+	}
+}
+
+func TestEnemySteeringAddsOrganicLateralMovement(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("organic", c, "verdant", 42)
+	r.AddPlayer("p1", "pilot", DefaultLoadout())
+	player := r.Entities[r.Players["p1"].EntityID]
+	player.Position = V(700, 500)
+	def := c.EnemyByID["skitter"]
+	r.spawnEnemy(def, V(500, 500))
+	for _, e := range r.Entities {
+		if e.Kind == EntityEnemy {
+			r.updateAI(c, 1.0/TickRate)
+			if math.Abs(e.Velocity.Y) < 0.001 {
+				t.Fatalf("expected lateral steering, got velocity %+v", e.Velocity)
+			}
+			return
+		}
+	}
+	t.Fatal("enemy not spawned")
+}
+
+func enemyMinDistance(r *RunState) float64 {
+	best := math.MaxFloat64
+	for _, a := range r.Entities {
+		if a.Kind != EntityEnemy {
+			continue
+		}
+		for _, b := range r.Entities {
+			if b.ID <= a.ID || b.Kind != EntityEnemy {
+				continue
+			}
+			best = math.Min(best, Dist(a.Position, b.Position))
+		}
+	}
+	return best
 }
