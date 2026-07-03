@@ -102,7 +102,7 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [ ] Add armor, hull, drone, ability, and module unlocks.
 - [ ] Add planet access requirements.
 - [ ] Enforce combat stat budgets so unlocks remain sidegrades.
-- [ ] Add blueprint/component crafting paths.
+- [x] Add blueprint/component crafting paths.
 - [ ] Add cosmetic unlocks that never affect gameplay.
 - [ ] Add seasonal progression with reset-safe account identity.
 

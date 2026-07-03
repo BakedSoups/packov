@@ -66,7 +66,8 @@ func newApp() *App {
 	run.AddPlayer(player, "Pilot", game.DefaultLoadout())
 	run.SpawnInitial(c)
 	look := game.DefaultAppearance("Pilot")
-	app := &App{catalog: c, run: run, player: player, loadout: game.DefaultLoadout(), started: time.Now(), status: "local fallback", screen: screenTitle, keys: map[ebiten.Key]bool{}, look: look}
+	localAccount := game.NewAccount(player, "Pilot")
+	app := &App{catalog: c, run: run, player: player, account: &localAccount, loadout: game.DefaultLoadout(), started: time.Now(), status: "local fallback", screen: screenTitle, keys: map[ebiten.Key]bool{}, look: look}
 	if net, err := newWSClient(); err == nil {
 		app.net = net
 		app.status = "connecting"

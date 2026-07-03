@@ -33,6 +33,7 @@ type menuState struct {
 	EditIndex   int
 	SettingsIdx int
 	LoadoutIdx  int
+	CraftIdx    int
 }
 
 var (
@@ -87,10 +88,12 @@ func (a *App) updateMenu() {
 		a.updateCharacterEditor()
 	case screenLoadout:
 		a.updateLoadout()
-	case screenInventory, screenCrafting, screenMarketplace:
+	case screenInventory, screenMarketplace:
 		if a.justPressed(ebiten.KeyEscape) || a.justPressed(ebiten.KeyEnter) || a.justPressed(ebiten.KeySpace) {
 			a.screen = screenStation
 		}
+	case screenCrafting:
+		a.updateCrafting()
 	case screenSettings:
 		a.updateList(len(settingsRows), func() {
 			if settingsRows[a.menu.Index] == "Back" {
@@ -98,6 +101,45 @@ func (a *App) updateMenu() {
 			}
 		})
 	}
+}
+
+func (a *App) updateCrafting() {
+	if a.justPressed(ebiten.KeyEscape) {
+		a.screen = screenStation
+		return
+	}
+	if len(a.catalog.Recipes) == 0 {
+		return
+	}
+	if a.justPressed(ebiten.KeyArrowUp) || a.justPressed(ebiten.KeyW) {
+		a.menu.CraftIdx = (a.menu.CraftIdx + len(a.catalog.Recipes) - 1) % len(a.catalog.Recipes)
+	}
+	if a.justPressed(ebiten.KeyArrowDown) || a.justPressed(ebiten.KeyS) {
+		a.menu.CraftIdx = (a.menu.CraftIdx + 1) % len(a.catalog.Recipes)
+	}
+	if a.justPressed(ebiten.KeyEnter) || a.justPressed(ebiten.KeySpace) {
+		a.craftSelected()
+	}
+}
+
+func (a *App) craftSelected() {
+	if len(a.catalog.Recipes) == 0 || a.menu.CraftIdx >= len(a.catalog.Recipes) {
+		return
+	}
+	recipe := a.catalog.Recipes[a.menu.CraftIdx]
+	if a.net != nil && a.net.isOpen() && a.hello {
+		a.net.send(protocol.ClientMessage{Type: "craft", RecipeID: recipe.ID})
+		a.status = "crafting " + recipe.Output
+		return
+	}
+	if a.account == nil {
+		return
+	}
+	if err := game.Craft(a.account, recipe); err != nil {
+		a.status = "craft failed: " + err.Error()
+		return
+	}
+	a.status = "crafted " + recipe.Output
 }
 
 func (a *App) updateLoadout() {
@@ -310,8 +352,12 @@ func (a *App) drawInventory(screen *ebiten.Image) {
 func (a *App) drawCrafting(screen *ebiten.Image) {
 	drawLargeText(screen, "CRAFTING", 72, 108)
 	lines := []string{}
-	for _, recipe := range a.catalog.Recipes {
-		lines = append(lines, fmt.Sprintf("%s -> %s   %d credits", recipe.ID, recipe.Output, recipe.Credits))
+	for i, recipe := range a.catalog.Recipes {
+		prefix := "  "
+		if i == a.menu.CraftIdx {
+			prefix = "> "
+		}
+		lines = append(lines, fmt.Sprintf("%s%s -> %s   %d credits", prefix, recipe.ID, recipe.Output, recipe.Credits))
 		for item, count := range recipe.Costs {
 			lines = append(lines, fmt.Sprintf("  %s x%d", item, count))
 		}
@@ -320,7 +366,7 @@ func (a *App) drawCrafting(screen *ebiten.Image) {
 		lines = append(lines, "No recipes loaded")
 	}
 	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 82, 220)
-	ebitenutil.DebugPrintAt(screen, "Craft action wiring is next economy slice", 82, 560)
+	ebitenutil.DebugPrintAt(screen, "Enter crafts    Esc returns", 82, 560)
 }
 
 func (a *App) drawMarketplace(screen *ebiten.Image) {

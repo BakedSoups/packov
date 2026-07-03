@@ -206,6 +206,9 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 		if err := game.Craft(&s.account, recipe); err != nil {
 			return err
 		}
+		if err := h.store.SaveAccount(ctx, s.account); err != nil {
+			return err
+		}
 		return s.write(ctx, protocol.ServerMessage{Type: "account", Account: &s.account})
 	case "appearance":
 		if s.id == "" {
