@@ -9,18 +9,21 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - Ebitengine/WebAssembly browser client exists with primitive rendering, twin-stick input, HUD, and local fallback simulation.
 - SpaceTimeDB schema and reducer contracts exist, but generated/native reducers are not implemented yet.
 - Docker Compose, Nginx config, and architecture/database docs exist.
+- The client UX will stay Go/Ebitengine-first. HTML remains only the thin WASM host shell.
 
 ## Build Order
 
 1. Finish authoritative client-server multiplayer.
 2. Implement real SpaceTimeDB persistence.
-3. Build station UI, inventory, crafting, marketplace, and settings.
-4. Complete extraction objectives, mining, carried loot capacity, and run results.
-5. Replace full snapshots with deltas and interest management.
-6. Expand boss mechanics and procedural planet generation.
-7. Add MMO social systems.
-8. Add live-service operations tooling.
-9. Harden for production deployment and load.
+3. Build the Go/Ebitengine menu shell and station UX.
+4. Build character customization and cosmetic editing.
+5. Build inventory, crafting, marketplace, and settings.
+6. Complete extraction objectives, mining, carried loot capacity, and run results.
+7. Replace full snapshots with deltas and interest management.
+8. Expand boss mechanics and procedural planet generation.
+9. Add MMO social systems.
+10. Add live-service operations tooling.
+11. Harden for production deployment and load.
 
 ## Milestone 1: Authoritative Multiplayer
 
@@ -56,6 +59,9 @@ This roadmap tracks the path from the current foundation to a production-grade b
 
 ## Milestone 4: Station UX
 
+- [ ] Add a Go/Ebitengine main menu state before connecting to gameplay.
+- [ ] Add menu navigation states: title, login/guest token, character select, station, matchmaking, settings, and in-run pause overlay.
+- [ ] Add controller and keyboard/mouse navigation for every menu.
 - [ ] Add station screen as the first connected screen.
 - [ ] Add loadout selection for weapons, abilities, hulls, drones, and modules.
 - [ ] Add inventory screen.
@@ -65,8 +71,20 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [ ] Add daily/weekly mission panel.
 - [ ] Add player profile and progression screen.
 - [ ] Add settings for audio, graphics, controls, accessibility, and controller mapping.
+- [ ] Keep all interactive UI implemented in Go/Ebitengine, not DOM overlays, so desktop, WASM, and Ebitdock paths share one UI codebase.
 
-## Milestone 5: Economy
+## Milestone 5: Character Customization
+
+- [ ] Add character/ship editor as a first-class Go/Ebitengine screen.
+- [ ] Edit player callsign, ship hull, color palette, trail style, nose/module geometry, drone skin, and cosmetic badges.
+- [ ] Preview the character/ship in a live primitive-rendered turntable scene.
+- [ ] Persist selected cosmetics to account state through SpaceTimeDB.
+- [ ] Separate gameplay loadout from cosmetic appearance so cosmetics never affect power.
+- [ ] Add unlock-source labels for cosmetics: boss drop, event reward, guild reward, marketplace purchase, season reward.
+- [ ] Add validation so clients can only equip cosmetics owned by the account.
+- [ ] Add future hooks for guild emblems and seasonal frames.
+
+## Milestone 6: Economy
 
 - [ ] Implement marketplace listing creation.
 - [ ] Implement buy listing.
@@ -77,7 +95,7 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [ ] Add credit sinks: crafting fees, listing fees, guild upgrades, cosmetics, and station services.
 - [ ] Add fraud/anomaly audit tables and admin review tools.
 
-## Milestone 6: Progression
+## Milestone 7: Progression
 
 - [ ] Add account XP and horizontal unlock tracks.
 - [ ] Add weapon unlock rules.
@@ -88,7 +106,7 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [ ] Add cosmetic unlocks that never affect gameplay.
 - [ ] Add seasonal progression with reset-safe account identity.
 
-## Milestone 7: Extraction Depth
+## Milestone 8: Extraction Depth
 
 - [ ] Add objective completion logic.
 - [ ] Add mining/resource interaction.
@@ -99,7 +117,7 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [ ] Add PvP extraction opt-in zones and anti-grief rules.
 - [ ] Add enemy director with heat, noise, and extraction-response budgets.
 
-## Milestone 8: Boss Depth
+## Milestone 9: Boss Depth
 
 - [ ] Hive Queen: nests, swarm waves, acid zones, egg armor.
 - [ ] Ancient Mech: rotating laser arms, shield generators, missile salvos.
@@ -110,7 +128,7 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [ ] Add ultra-rare cosmetic drops.
 - [ ] Add rotating world boss schedule.
 
-## Milestone 9: Procedural Planets
+## Milestone 10: Procedural Planets
 
 - [ ] Replace simple seeded placement with reusable map pieces.
 - [ ] Add biome-specific zones for forest, desert, ice, volcanic, moon, alien hive, abandoned facility, and derelict ship.
@@ -120,7 +138,7 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [ ] Apply world event modifiers to generation.
 - [ ] Add extraction-site variation and boss arenas.
 
-## Milestone 10: MMO Social
+## Milestone 11: MMO Social
 
 - [ ] Global chat.
 - [ ] Party chat.
@@ -133,7 +151,7 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [ ] Leaderboards.
 - [ ] Trading.
 
-## Milestone 11: Live Service
+## Milestone 12: Live Service
 
 - [ ] Daily quests.
 - [ ] Weekly quests.
@@ -146,7 +164,17 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [ ] Admin announcements.
 - [ ] Content catalog versioning and hot reload.
 
-## Milestone 12: Production Hardening
+## Milestone 13: Ebitdock and Development Workflow
+
+- [ ] Keep the primary client as Go/Ebitengine compiled to WASM.
+- [ ] Use Ebitdock as the fast browser feedback loop for the Go client when available locally.
+- [ ] Add `make ebitdock` or equivalent script once the local Ebitdock command/API is confirmed.
+- [ ] Document how Ebitdock serves the WASM build, reloads client changes, and captures screenshots.
+- [ ] Add Ebitdock smoke checks for menu navigation, character editor, station, matchmaking, and in-run rendering.
+- [ ] Ensure Ebitdock testing uses the same Go client codepath as production browser builds.
+- [ ] Keep generated artifacts ignored; source remains Go plus minimal HTML host shell.
+
+## Milestone 14: Production Hardening
 
 - [ ] Docker health checks.
 - [ ] CI for Go tests, WASM build, Docker build, and config validation.
