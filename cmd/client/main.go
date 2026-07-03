@@ -22,23 +22,25 @@ const (
 )
 
 type App struct {
-	catalog *game.Catalog
-	run     *game.RunState
-	net     *wsClient
-	screen  screenState
-	player  game.PlayerID
-	account *game.Account
-	seq     uint64
-	camera  game.Vec2
-	trails  []trail
-	started time.Time
-	status  string
-	remote  bool
-	hello   bool
-	queued  bool
-	menu    menuState
-	keys    map[ebiten.Key]bool
-	look    game.Appearance
+	catalog      *game.Catalog
+	run          *game.RunState
+	net          *wsClient
+	screen       screenState
+	player       game.PlayerID
+	account      *game.Account
+	seq          uint64
+	camera       game.Vec2
+	trails       []trail
+	started      time.Time
+	snapshotAt   time.Time
+	prevEntities map[game.EntityID]game.Entity
+	status       string
+	remote       bool
+	hello        bool
+	queued       bool
+	menu         menuState
+	keys         map[ebiten.Key]bool
+	look         game.Appearance
 }
 
 type trail struct {
@@ -198,6 +200,13 @@ func (a *App) applySnapshot(s game.Snapshot) {
 	if a.run == nil {
 		a.run = &game.RunState{}
 	}
+	a.prevEntities = map[game.EntityID]game.Entity{}
+	if a.run.Entities != nil {
+		for id, e := range a.run.Entities {
+			a.prevEntities[id] = *e
+		}
+	}
+	a.snapshotAt = time.Now()
 	a.run.ID = s.RunID
 	a.run.Tick = s.Tick
 	a.run.Phase = s.Phase
@@ -229,9 +238,32 @@ func (a *App) Draw(screen *ebiten.Image) {
 		vector.DrawFilledCircle(screen, float32(p.X), float32(p.Y), float32(8*t.TTL), color.RGBA{58, 202, 255, uint8(90 * t.TTL / 0.35)}, false)
 	}
 	for _, e := range a.run.Entities {
-		a.drawEntity(screen, e)
+		entity := a.renderEntity(e)
+		a.drawEntity(screen, &entity)
 	}
 	a.drawHUD(screen)
+}
+
+func (a *App) renderEntity(e *game.Entity) game.Entity {
+	out := *e
+	if !a.remote || a.prevEntities == nil || a.snapshotAt.IsZero() {
+		return out
+	}
+	prev, ok := a.prevEntities[e.ID]
+	if !ok {
+		return out
+	}
+	alpha := time.Since(a.snapshotAt).Seconds() * game.TickRate
+	if alpha < 0 {
+		alpha = 0
+	}
+	if alpha > 1 {
+		alpha = 1
+	}
+	out.Position = prev.Position.Mul(1 - alpha).Add(e.Position.Mul(alpha))
+	out.Rotation = prev.Rotation + (e.Rotation-prev.Rotation)*alpha
+	out.HP = prev.HP + (e.HP-prev.HP)*alpha
+	return out
 }
 
 func (a *App) Layout(_, _ int) (int, int) {
