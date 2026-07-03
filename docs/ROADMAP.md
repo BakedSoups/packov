@@ -34,8 +34,8 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [x] Preserve local fallback when no server is available.
 - [ ] Add client-side interpolation between snapshots.
 - [ ] Add reconnect resume by token and active run ID.
-- [ ] Add server-side input sequence validation and rate limits.
-- [ ] Add loadout validation against account unlocks.
+- [x] Add server-side input sequence validation and rate limits.
+- [x] Add loadout validation against account unlocks.
 
 ## Milestone 2: Real SpaceTimeDB Integration
 

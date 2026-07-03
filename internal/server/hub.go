@@ -29,12 +29,15 @@ type Hub struct {
 }
 
 type Session struct {
-	id      game.PlayerID
-	name    string
-	account game.Account
-	conn    *websocket.Conn
-	sendMu  sync.Mutex
-	runID   string
+	id               game.PlayerID
+	name             string
+	account          game.Account
+	conn             *websocket.Conn
+	sendMu           sync.Mutex
+	runID            string
+	lastSeq          uint64
+	inputWindowStart time.Time
+	inputCount       int
 }
 
 func NewHub(c *game.Catalog, store Persistence, log *slog.Logger) *Hub {
@@ -131,6 +134,9 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 		if loadout.WeaponID == "" {
 			loadout = game.DefaultLoadout()
 		}
+		if err := validateLoadout(s.account, loadout); err != nil {
+			return err
+		}
 		planetID := msg.PlanetID
 		if planetID == "" {
 			planetID = "verdant"
@@ -167,6 +173,9 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 		run := h.runs[s.runID]
 		h.mu.RUnlock()
 		if run != nil {
+			if err := s.acceptInput(msg.Input); err != nil {
+				return err
+			}
 			msg.Input.PlayerID = s.id
 			run.ApplyInput(msg.Input)
 		}
@@ -210,6 +219,35 @@ func validateAppearance(account game.Account, appearance game.Appearance) error 
 	if appearance.HullID != "" && !account.Unlocks[appearance.HullID] {
 		return fmt.Errorf("hull %s is not unlocked", appearance.HullID)
 	}
+	return nil
+}
+
+func validateLoadout(account game.Account, loadout game.Loadout) error {
+	for _, unlock := range []string{loadout.WeaponID, loadout.AbilityID, loadout.HullID, loadout.DroneID} {
+		if unlock == "" {
+			continue
+		}
+		if !account.Unlocks[unlock] {
+			return fmt.Errorf("loadout item %s is not unlocked", unlock)
+		}
+	}
+	return nil
+}
+
+func (s *Session) acceptInput(input game.InputCommand) error {
+	if input.Seq <= s.lastSeq {
+		return fmt.Errorf("stale input sequence")
+	}
+	now := time.Now()
+	if now.Sub(s.inputWindowStart) > time.Second {
+		s.inputWindowStart = now
+		s.inputCount = 0
+	}
+	s.inputCount++
+	if s.inputCount > game.TickRate*3 {
+		return fmt.Errorf("input rate exceeded")
+	}
+	s.lastSeq = input.Seq
 	return nil
 }
 
