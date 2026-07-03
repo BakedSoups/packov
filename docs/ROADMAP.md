@@ -86,9 +86,9 @@ This roadmap tracks the path from the current foundation to a production-grade b
 
 ## Milestone 6: Economy
 
-- [ ] Implement marketplace listing creation.
-- [ ] Implement buy listing.
-- [ ] Implement cancel listing.
+- [x] Implement marketplace listing creation.
+- [x] Implement buy listing.
+- [x] Implement cancel listing.
 - [ ] Implement auctions.
 - [ ] Implement direct player trades with escrow.
 - [ ] Add market price history and volume stats.

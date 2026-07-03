@@ -21,11 +21,13 @@ type Hub struct {
 	store   Persistence
 	log     *slog.Logger
 
-	mu      sync.RWMutex
-	runs    map[string]*game.RunState
-	players map[game.PlayerID]*Session
-	match   game.Matchmaker
-	event   game.WorldEvent
+	mu          sync.RWMutex
+	runs        map[string]*game.RunState
+	players     map[game.PlayerID]*Session
+	market      map[string]game.MarketplaceListing
+	match       game.Matchmaker
+	event       game.WorldEvent
+	nextListing uint64
 }
 
 type Session struct {
@@ -47,6 +49,7 @@ func NewHub(c *game.Catalog, store Persistence, log *slog.Logger) *Hub {
 		log:     log,
 		runs:    map[string]*game.RunState{},
 		players: map[game.PlayerID]*Session{},
+		market:  map[string]game.MarketplaceListing{},
 		event:   game.GenerateWorldEvent(c, time.Now()),
 	}
 }
@@ -225,8 +228,137 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 			return err
 		}
 		return s.write(ctx, protocol.ServerMessage{Type: "account", Account: &s.account})
+	case "market_list":
+		return s.write(ctx, protocol.ServerMessage{Type: "market", Listings: h.marketListings()})
+	case "market_sell":
+		if s.id == "" {
+			return fmt.Errorf("authenticate first")
+		}
+		listing, err := h.createListing(ctx, s, msg.ItemID, msg.Quantity, msg.UnitPrice)
+		if err != nil {
+			return err
+		}
+		_ = s.write(ctx, protocol.ServerMessage{Type: "account", Account: &s.account})
+		h.broadcast(protocol.ServerMessage{Type: "market", Listings: h.marketListings()})
+		h.log.Info("market listing created", "listing", listing.ID, "item", listing.ItemID)
+	case "market_buy":
+		if s.id == "" {
+			return fmt.Errorf("authenticate first")
+		}
+		if err := h.buyListing(ctx, s, msg.ListingID); err != nil {
+			return err
+		}
+		_ = s.write(ctx, protocol.ServerMessage{Type: "account", Account: &s.account})
+		h.broadcast(protocol.ServerMessage{Type: "market", Listings: h.marketListings()})
+	case "market_cancel":
+		if s.id == "" {
+			return fmt.Errorf("authenticate first")
+		}
+		if err := h.cancelListing(ctx, s, msg.ListingID); err != nil {
+			return err
+		}
+		_ = s.write(ctx, protocol.ServerMessage{Type: "account", Account: &s.account})
+		h.broadcast(protocol.ServerMessage{Type: "market", Listings: h.marketListings()})
 	}
 	return nil
+}
+
+func (h *Hub) marketListings() []game.MarketplaceListing {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	listings := make([]game.MarketplaceListing, 0, len(h.market))
+	for _, listing := range h.market {
+		listings = append(listings, listing)
+	}
+	return listings
+}
+
+func (h *Hub) createListing(ctx context.Context, s *Session, itemID string, quantity, unitPrice int) (game.MarketplaceListing, error) {
+	if itemID == "" || quantity <= 0 || unitPrice <= 0 {
+		return game.MarketplaceListing{}, fmt.Errorf("invalid listing")
+	}
+	if _, ok := h.catalog.LootByID[itemID]; !ok {
+		return game.MarketplaceListing{}, fmt.Errorf("unknown market item")
+	}
+	if !s.account.Inventory.Remove(itemID, quantity) {
+		return game.MarketplaceListing{}, fmt.Errorf("not enough inventory")
+	}
+	h.mu.Lock()
+	h.nextListing++
+	listing := game.MarketplaceListing{
+		ID:        fmt.Sprintf("listing-%06d", h.nextListing),
+		SellerID:  s.id,
+		ItemID:    itemID,
+		Quantity:  quantity,
+		UnitPrice: unitPrice,
+		ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
+	}
+	h.market[listing.ID] = listing
+	h.mu.Unlock()
+	if err := h.store.SaveAccount(ctx, s.account); err != nil {
+		return game.MarketplaceListing{}, err
+	}
+	return listing, nil
+}
+
+func (h *Hub) buyListing(ctx context.Context, buyer *Session, listingID string) error {
+	h.mu.Lock()
+	listing, ok := h.market[listingID]
+	if !ok {
+		h.mu.Unlock()
+		return fmt.Errorf("listing not found")
+	}
+	if listing.SellerID == buyer.id {
+		h.mu.Unlock()
+		return fmt.Errorf("cannot buy your own listing")
+	}
+	total := listing.Quantity * listing.UnitPrice
+	if buyer.account.Credits < total {
+		h.mu.Unlock()
+		return fmt.Errorf("not enough credits")
+	}
+	delete(h.market, listingID)
+	h.mu.Unlock()
+
+	seller := h.session(listing.SellerID)
+	var sellerAccount game.Account
+	var err error
+	if seller != nil {
+		sellerAccount = seller.account
+	} else {
+		sellerAccount, err = h.store.LoadAccount(ctx, listing.SellerID, string(listing.SellerID))
+		if err != nil {
+			return err
+		}
+	}
+	buyer.account.Credits -= total
+	buyer.account.Inventory.Add(listing.ItemID, listing.Quantity)
+	sellerAccount.Credits += total
+	if seller != nil {
+		seller.account = sellerAccount
+		_ = seller.write(ctx, protocol.ServerMessage{Type: "account", Account: &seller.account})
+	}
+	if err := h.store.SaveAccount(ctx, buyer.account); err != nil {
+		return err
+	}
+	return h.store.SaveAccount(ctx, sellerAccount)
+}
+
+func (h *Hub) cancelListing(ctx context.Context, s *Session, listingID string) error {
+	h.mu.Lock()
+	listing, ok := h.market[listingID]
+	if !ok {
+		h.mu.Unlock()
+		return fmt.Errorf("listing not found")
+	}
+	if listing.SellerID != s.id {
+		h.mu.Unlock()
+		return fmt.Errorf("listing belongs to another seller")
+	}
+	delete(h.market, listingID)
+	h.mu.Unlock()
+	s.account.Inventory.Add(listing.ItemID, listing.Quantity)
+	return h.store.SaveAccount(ctx, s.account)
 }
 
 func validateAppearance(account game.Account, appearance game.Appearance) error {

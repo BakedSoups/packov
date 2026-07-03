@@ -12,15 +12,19 @@ type ClientMessage struct {
 	Input      game.InputCommand `json:"input,omitempty"`
 	RecipeID   string            `json:"recipe_id,omitempty"`
 	ListingID  string            `json:"listing_id,omitempty"`
+	ItemID     string            `json:"item_id,omitempty"`
+	Quantity   int               `json:"quantity,omitempty"`
+	UnitPrice  int               `json:"unit_price,omitempty"`
 }
 
 type ServerMessage struct {
-	Type       string              `json:"type"`
-	PlayerID   game.PlayerID       `json:"player_id,omitempty"`
-	Account    *game.Account       `json:"account,omitempty"`
-	Snapshot   *game.Snapshot      `json:"snapshot,omitempty"`
-	Catalog    *game.Catalog       `json:"catalog,omitempty"`
-	WorldEvent *game.WorldEvent    `json:"world_event,omitempty"`
-	Missions   []game.DailyMission `json:"missions,omitempty"`
-	Error      string              `json:"error,omitempty"`
+	Type       string                    `json:"type"`
+	PlayerID   game.PlayerID             `json:"player_id,omitempty"`
+	Account    *game.Account             `json:"account,omitempty"`
+	Snapshot   *game.Snapshot            `json:"snapshot,omitempty"`
+	Catalog    *game.Catalog             `json:"catalog,omitempty"`
+	WorldEvent *game.WorldEvent          `json:"world_event,omitempty"`
+	Missions   []game.DailyMission       `json:"missions,omitempty"`
+	Listings   []game.MarketplaceListing `json:"listings,omitempty"`
+	Error      string                    `json:"error,omitempty"`
 }
