@@ -41,6 +41,7 @@ type App struct {
 	remote       bool
 	hello        bool
 	queued       bool
+	localSettled bool
 	menu         menuState
 	keys         map[ebiten.Key]bool
 	look         game.Appearance
@@ -122,6 +123,10 @@ func (a *App) Update() error {
 	} else {
 		a.run.ApplyInput(cmd)
 		a.run.Step(a.catalog)
+		if a.run.Phase == game.PhaseComplete || a.run.Phase == game.PhaseFailed {
+			a.settleLocalRun()
+			a.screen = screenResult
+		}
 	}
 	if ps := a.run.Players[a.player]; ps != nil {
 		if e := a.run.Entities[ps.EntityID]; e != nil {
@@ -133,6 +138,21 @@ func (a *App) Update() error {
 	}
 	a.updateTrails()
 	return nil
+}
+
+func (a *App) settleLocalRun() {
+	if a.remote || a.localSettled || a.account == nil || a.run == nil {
+		return
+	}
+	a.localSettled = true
+	if a.run.Phase != game.PhaseComplete {
+		return
+	}
+	if ps := a.run.Players[a.player]; ps != nil && ps.Extracted {
+		for item, count := range ps.Carried.Items {
+			a.account.Inventory.Add(item, count)
+		}
+	}
 }
 
 func (a *App) updateTrails() {
@@ -183,7 +203,11 @@ func (a *App) pollNetwork() {
 			if msg.Snapshot != nil {
 				a.applySnapshot(*msg.Snapshot)
 				a.remote = true
-				a.screen = screenRun
+				if msg.Snapshot.Phase == game.PhaseComplete || msg.Snapshot.Phase == game.PhaseFailed {
+					a.screen = screenResult
+				} else {
+					a.screen = screenRun
+				}
 				a.queued = true
 				a.status = "authoritative server"
 			}

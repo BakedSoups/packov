@@ -25,6 +25,7 @@ const (
 	screenCrafting
 	screenMarketplace
 	screenSettings
+	screenResult
 	screenRun
 )
 
@@ -106,6 +107,12 @@ func (a *App) updateMenu() {
 			}
 			a.toggleSetting(a.menu.Index)
 		})
+	case screenResult:
+		if a.justPressed(ebiten.KeyEnter) || a.justPressed(ebiten.KeySpace) || a.justPressed(ebiten.KeyEscape) {
+			a.remote = false
+			a.queued = false
+			a.screen = screenStation
+		}
 	}
 }
 
@@ -346,6 +353,7 @@ func (a *App) syncAppearance() {
 func (a *App) startLocalRun() {
 	a.remote = false
 	a.queued = false
+	a.localSettled = false
 	a.run = game.NewRun("local-solo", a.catalog, "verdant", timeSeed())
 	a.run.AddPlayer(a.player, a.look.Callsign, a.loadout)
 	a.run.SpawnInitial(a.catalog)
@@ -372,6 +380,8 @@ func (a *App) drawMenu(screen *ebiten.Image) {
 		a.drawMarketplace(screen)
 	case screenSettings:
 		a.drawSettings(screen)
+	case screenResult:
+		a.drawRunResult(screen)
 	}
 }
 
@@ -500,6 +510,38 @@ func (a *App) drawSettings(screen *ebiten.Image) {
 	}
 	drawMenuList(screen, rows, a.menu.Index, 82, 230)
 	ebitenutil.DebugPrintAt(screen, "Enter toggles selected setting", 520, 250)
+}
+
+func (a *App) drawRunResult(screen *ebiten.Image) {
+	title := "MISSION RESULT"
+	if a.run != nil && a.run.Phase == game.PhaseFailed {
+		title = "MISSION FAILED"
+	}
+	drawLargeText(screen, title, 72, 108)
+	lines := []string{}
+	if a.run == nil {
+		lines = append(lines, "No run data available")
+	} else {
+		lines = append(lines, "Planet: "+a.run.Planet.Name)
+		lines = append(lines, "Phase: "+strings.ToUpper(string(a.run.Phase)))
+		if ps := a.run.Players[a.player]; ps != nil {
+			if ps.Extracted {
+				lines = append(lines, "Extraction: successful")
+				lines = append(lines, "Carried loot was transferred to station inventory.")
+			}
+			if ps.Downed || a.run.Phase == game.PhaseFailed {
+				lines = append(lines, "Extraction: failed")
+				lines = append(lines, "Carried loot was lost. Unlocks, cosmetics, and account progress remain.")
+			}
+			lines = append(lines, fmt.Sprintf("Carried at result: %v", ps.Carried.Items))
+		}
+		if len(a.run.Messages) > 0 {
+			lines = append(lines, "")
+			lines = append(lines, a.run.Messages[len(a.run.Messages)-1])
+		}
+	}
+	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 82, 210)
+	ebitenutil.DebugPrintAt(screen, "Enter returns to station", 82, 560)
 }
 
 func (a *App) drawShipPreview(screen *ebiten.Image, center game.Vec2, scale float64) {

@@ -76,3 +76,37 @@ func TestMarketplaceCreateBuyCancel(t *testing.T) {
 		t.Fatal("bought listing should be removed")
 	}
 }
+
+func TestSettleRunPersistsExtractedLootOnly(t *testing.T) {
+	ctx := context.Background()
+	catalog := game.DefaultCatalogForClient()
+	store := NewMemoryStore()
+	hub := NewHub(catalog, store, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	account := game.NewAccount("p1", "Pilot")
+	session := &Session{id: "p1", name: "Pilot", account: account, runID: "run"}
+	hub.players["p1"] = session
+
+	run := game.NewRun("run", catalog, "verdant", 1)
+	run.AddPlayer("p1", "Pilot", game.DefaultLoadout())
+	ps := run.Players["p1"]
+	ps.Carried.Add("alien_alloy", 2)
+	ps.Extracted = true
+	run.Phase = game.PhaseComplete
+
+	hub.settleRun(ctx, run)
+	if session.account.Inventory.Items["alien_alloy"] != 2 {
+		t.Fatalf("expected extracted loot persisted, got %+v", session.account.Inventory.Items)
+	}
+
+	failed := game.NewRun("failed", catalog, "verdant", 2)
+	failed.AddPlayer("p1", "Pilot", game.DefaultLoadout())
+	fps := failed.Players["p1"]
+	fps.Carried.Add("alien_alloy", 5)
+	fps.Downed = true
+	failed.Phase = game.PhaseFailed
+	hub.settleRun(ctx, failed)
+	if session.account.Inventory.Items["alien_alloy"] != 2 {
+		t.Fatalf("failed run should not persist carried loot, got %+v", session.account.Inventory.Items)
+	}
+}

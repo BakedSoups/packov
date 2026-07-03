@@ -25,6 +25,7 @@ type Hub struct {
 	runs        map[string]*game.RunState
 	players     map[game.PlayerID]*Session
 	market      map[string]game.MarketplaceListing
+	settledRuns map[string]bool
 	match       game.Matchmaker
 	event       game.WorldEvent
 	nextListing uint64
@@ -44,13 +45,14 @@ type Session struct {
 
 func NewHub(c *game.Catalog, store Persistence, log *slog.Logger) *Hub {
 	return &Hub{
-		catalog: c,
-		store:   store,
-		log:     log,
-		runs:    map[string]*game.RunState{},
-		players: map[game.PlayerID]*Session{},
-		market:  map[string]game.MarketplaceListing{},
-		event:   game.GenerateWorldEvent(c, time.Now()),
+		catalog:     c,
+		store:       store,
+		log:         log,
+		runs:        map[string]*game.RunState{},
+		players:     map[game.PlayerID]*Session{},
+		market:      map[string]game.MarketplaceListing{},
+		settledRuns: map[string]bool{},
+		event:       game.GenerateWorldEvent(c, time.Now()),
 	}
 }
 
@@ -425,14 +427,51 @@ func (h *Hub) step(ctx context.Context) {
 		r.Step(h.catalog)
 		snap := r.Snapshot()
 		_ = h.store.RecordRunSnapshot(ctx, snap)
+		if snap.Phase == game.PhaseComplete || snap.Phase == game.PhaseFailed {
+			h.settleRun(ctx, r)
+		}
 		for _, ps := range snap.Players {
 			if ss := h.session(ps.ID); ss != nil && ss.runID == r.ID {
 				_ = ss.write(ctx, protocol.ServerMessage{Type: "snapshot", Snapshot: &snap})
-				if snap.Phase == game.PhaseComplete || snap.Phase == game.PhaseFailed {
-					ss.account.CurrentRun = ""
-					_ = h.store.SaveAccount(ctx, ss.account)
-				}
 			}
+		}
+	}
+}
+
+func (h *Hub) settleRun(ctx context.Context, r *game.RunState) {
+	h.mu.Lock()
+	if h.settledRuns[r.ID] {
+		h.mu.Unlock()
+		return
+	}
+	h.settledRuns[r.ID] = true
+	h.mu.Unlock()
+
+	for _, ps := range r.Players {
+		ss := h.session(ps.ID)
+		var account game.Account
+		var err error
+		if ss != nil {
+			account = ss.account
+		} else {
+			account, err = h.store.LoadAccount(ctx, ps.ID, string(ps.ID))
+			if err != nil {
+				continue
+			}
+		}
+		if ps.Extracted && r.Phase == game.PhaseComplete {
+			for item, count := range ps.Carried.Items {
+				account.Inventory.Add(item, count)
+			}
+		}
+		account.CurrentRun = ""
+		if err := h.store.SaveAccount(ctx, account); err != nil {
+			continue
+		}
+		if ss != nil {
+			ss.account = account
+			ss.runID = ""
+			_ = ss.write(ctx, protocol.ServerMessage{Type: "account", Account: &ss.account})
 		}
 	}
 }

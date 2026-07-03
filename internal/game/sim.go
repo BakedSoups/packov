@@ -162,8 +162,9 @@ func (r *RunState) Step(c *Catalog) {
 	r.integrate(dt)
 	r.resolveCombat(c)
 	r.updateExtraction(c)
+	r.updateRunOutcome()
 	r.cleanup(c)
-	if r.Tick%uint64(TickRate*18) == 0 {
+	if r.Phase != PhaseComplete && r.Phase != PhaseFailed && r.Tick%uint64(TickRate*18) == 0 {
 		r.spawnWave(c, 4+r.Planet.Threat*2, r.Map.Extraction)
 	}
 }
@@ -363,7 +364,6 @@ func (r *RunState) resolveCombat(c *Catalog) {
 }
 
 func (r *RunState) updateExtraction(c *Catalog) {
-	allDone := true
 	anyExtracting := false
 	for _, ps := range r.Players {
 		if ps.Extracting && !ps.Extracted && !ps.Downed {
@@ -371,19 +371,42 @@ func (r *RunState) updateExtraction(c *Catalog) {
 			if r.Tick-ps.ExtractStart > uint64(TickRate*45) {
 				ps.Extracted = true
 				r.Messages = append(r.Messages, ps.Name+" extracted.")
-			} else {
-				allDone = false
 			}
-		}
-		if !ps.Extracted && !ps.Downed {
-			allDone = false
 		}
 	}
 	if anyExtracting && r.Tick%uint64(TickRate*7) == 0 {
 		r.spawnWave(c, 6+r.Planet.Threat*2, r.Map.Extraction)
 	}
-	if allDone {
+}
+
+func (r *RunState) updateRunOutcome() {
+	if r.Phase == PhaseComplete || r.Phase == PhaseFailed || len(r.Players) == 0 {
+		return
+	}
+	active := 0
+	extracted := 0
+	downed := 0
+	for _, ps := range r.Players {
+		switch {
+		case ps.Extracted:
+			extracted++
+		case ps.Downed:
+			downed++
+		default:
+			active++
+		}
+	}
+	if active > 0 {
+		return
+	}
+	if extracted > 0 {
 		r.Phase = PhaseComplete
+		r.Messages = append(r.Messages, "Run complete. Extracted loot secured.")
+		return
+	}
+	if downed > 0 {
+		r.Phase = PhaseFailed
+		r.Messages = append(r.Messages, "Squad wiped. Carried loot lost; account progression retained.")
 	}
 }
 
