@@ -28,6 +28,7 @@ type App struct {
 	screen       screenState
 	player       game.PlayerID
 	account      *game.Account
+	loadout      game.Loadout
 	seq          uint64
 	camera       game.Vec2
 	trails       []trail
@@ -65,7 +66,7 @@ func newApp() *App {
 	run.AddPlayer(player, "Pilot", game.DefaultLoadout())
 	run.SpawnInitial(c)
 	look := game.DefaultAppearance("Pilot")
-	app := &App{catalog: c, run: run, player: player, started: time.Now(), status: "local fallback", screen: screenTitle, keys: map[ebiten.Key]bool{}, look: look}
+	app := &App{catalog: c, run: run, player: player, loadout: game.DefaultLoadout(), started: time.Now(), status: "local fallback", screen: screenTitle, keys: map[ebiten.Key]bool{}, look: look}
 	if net, err := newWSClient(); err == nil {
 		app.net = net
 		app.status = "connecting"

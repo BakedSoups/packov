@@ -63,9 +63,9 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [x] Add menu navigation states: title, character select, station, matchmaking entry, settings, and in-run escape flow.
 - [x] Add keyboard/controller-style navigation for every menu.
 - [x] Add station screen as the first connected screen.
-- [ ] Add loadout selection for weapons, abilities, hulls, drones, and modules.
-- [ ] Add inventory screen.
-- [ ] Add crafting screen with component requirements.
+- [x] Add loadout selection for weapons, abilities, and hulls.
+- [x] Add inventory screen.
+- [x] Add crafting screen with component requirements.
 - [ ] Add marketplace buy/sell/cancel screens.
 - [ ] Add planet selection and instant matchmaking.
 - [ ] Add daily/weekly mission panel.

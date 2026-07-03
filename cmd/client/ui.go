@@ -20,6 +20,10 @@ const (
 	screenTitle screenState = iota
 	screenCharacter
 	screenStation
+	screenLoadout
+	screenInventory
+	screenCrafting
+	screenMarketplace
 	screenSettings
 	screenRun
 )
@@ -28,6 +32,7 @@ type menuState struct {
 	Index       int
 	EditIndex   int
 	SettingsIdx int
+	LoadoutIdx  int
 }
 
 var (
@@ -62,6 +67,14 @@ func (a *App) updateMenu() {
 			switch stationItems[a.menu.Index] {
 			case "Deploy Verdant-9":
 				a.deploy()
+			case "Loadout":
+				a.screen = screenLoadout
+			case "Inventory":
+				a.screen = screenInventory
+			case "Crafting":
+				a.screen = screenCrafting
+			case "Marketplace":
+				a.screen = screenMarketplace
 			case "Character":
 				a.screen = screenCharacter
 			case "Settings":
@@ -72,12 +85,48 @@ func (a *App) updateMenu() {
 		})
 	case screenCharacter:
 		a.updateCharacterEditor()
+	case screenLoadout:
+		a.updateLoadout()
+	case screenInventory, screenCrafting, screenMarketplace:
+		if a.justPressed(ebiten.KeyEscape) || a.justPressed(ebiten.KeyEnter) || a.justPressed(ebiten.KeySpace) {
+			a.screen = screenStation
+		}
 	case screenSettings:
 		a.updateList(len(settingsRows), func() {
 			if settingsRows[a.menu.Index] == "Back" {
 				a.screen = screenStation
 			}
 		})
+	}
+}
+
+func (a *App) updateLoadout() {
+	if a.justPressed(ebiten.KeyEscape) {
+		a.screen = screenStation
+		return
+	}
+	if a.justPressed(ebiten.KeyArrowUp) || a.justPressed(ebiten.KeyW) {
+		a.menu.LoadoutIdx = (a.menu.LoadoutIdx + 2) % 3
+	}
+	if a.justPressed(ebiten.KeyArrowDown) || a.justPressed(ebiten.KeyS) {
+		a.menu.LoadoutIdx = (a.menu.LoadoutIdx + 1) % 3
+	}
+	if a.justPressed(ebiten.KeyArrowLeft) || a.justPressed(ebiten.KeyA) {
+		a.cycleLoadout(-1)
+	}
+	if a.justPressed(ebiten.KeyArrowRight) || a.justPressed(ebiten.KeyD) || a.justPressed(ebiten.KeyEnter) || a.justPressed(ebiten.KeySpace) {
+		a.cycleLoadout(1)
+	}
+}
+
+func (a *App) cycleLoadout(delta int) {
+	switch a.menu.LoadoutIdx {
+	case 0:
+		a.loadout.WeaponID = cycleString(a.weaponIDs(), a.loadout.WeaponID, delta)
+	case 1:
+		a.loadout.AbilityID = cycleString(a.abilityIDs(), a.loadout.AbilityID, delta)
+	case 2:
+		a.loadout.HullID = cycleString([]string{"hull_scout"}, a.loadout.HullID, delta)
 	}
 }
 
@@ -153,7 +202,7 @@ func (a *App) deploy() {
 	if a.net != nil && a.net.isOpen() {
 		a.queued = true
 		a.status = "queueing"
-		a.net.send(protocol.ClientMessage{Type: "queue", PlanetID: "verdant", Loadout: game.DefaultLoadout()})
+		a.net.send(protocol.ClientMessage{Type: "queue", PlanetID: "verdant", Loadout: a.loadout})
 		return
 	}
 	a.startLocalRun()
@@ -172,7 +221,7 @@ func (a *App) startLocalRun() {
 	a.remote = false
 	a.queued = false
 	a.run = game.NewRun("local-solo", a.catalog, "verdant", timeSeed())
-	a.run.AddPlayer(a.player, a.look.Callsign, game.DefaultLoadout())
+	a.run.AddPlayer(a.player, a.look.Callsign, a.loadout)
 	a.run.SpawnInitial(a.catalog)
 	a.screen = screenRun
 	a.status = "local fallback"
@@ -187,6 +236,14 @@ func (a *App) drawMenu(screen *ebiten.Image) {
 		a.drawStation(screen)
 	case screenCharacter:
 		a.drawCharacter(screen)
+	case screenLoadout:
+		a.drawLoadout(screen)
+	case screenInventory:
+		a.drawInventory(screen)
+	case screenCrafting:
+		a.drawCrafting(screen)
+	case screenMarketplace:
+		a.drawMarketplace(screen)
 	case screenSettings:
 		a.drawSettings(screen)
 	}
@@ -215,13 +272,70 @@ func (a *App) drawStation(screen *ebiten.Image) {
 	drawLargeText(screen, "STATION", 70, 108)
 	drawMenuList(screen, stationItems, a.menu.Index, 76, 220)
 	lines := []string{
-		"Loadout: Machine Gun / Dash / Scout Hull",
+		fmt.Sprintf("Loadout: %s / %s / %s", a.weaponName(a.loadout.WeaponID), a.abilityName(a.loadout.AbilityID), a.loadout.HullID),
 		fmt.Sprintf("Credits: %d", accountCredits(a.account)),
 		"Daily: Extract once, recover resources, damage a boss",
 		"Planet: Verdant-9 / Forest / Threat 1",
 	}
 	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 520, 230)
 	a.drawShipPreview(screen, game.V(940, 430), 1.0)
+}
+
+func (a *App) drawLoadout(screen *ebiten.Image) {
+	drawLargeText(screen, "LOADOUT", 72, 108)
+	rows := []string{
+		"Weapon  " + a.weaponName(a.loadout.WeaponID),
+		"Ability " + a.abilityName(a.loadout.AbilityID),
+		"Hull    " + a.loadout.HullID,
+	}
+	drawMenuList(screen, rows, a.menu.LoadoutIdx, 82, 230)
+	ebitenutil.DebugPrintAt(screen, "A/D or arrows change    Esc returns", 82, 390)
+	a.drawShipPreview(screen, game.V(880, 380), 1.2)
+}
+
+func (a *App) drawInventory(screen *ebiten.Image) {
+	drawLargeText(screen, "INVENTORY", 72, 108)
+	lines := []string{fmt.Sprintf("Credits: %d", accountCredits(a.account))}
+	if a.account == nil || len(a.account.Inventory.Items) == 0 {
+		lines = append(lines, "Station inventory empty")
+	} else {
+		for item, count := range a.account.Inventory.Items {
+			lines = append(lines, fmt.Sprintf("%s x%d", item, count))
+		}
+	}
+	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 82, 220)
+	ebitenutil.DebugPrintAt(screen, "Enter returns", 82, 560)
+}
+
+func (a *App) drawCrafting(screen *ebiten.Image) {
+	drawLargeText(screen, "CRAFTING", 72, 108)
+	lines := []string{}
+	for _, recipe := range a.catalog.Recipes {
+		lines = append(lines, fmt.Sprintf("%s -> %s   %d credits", recipe.ID, recipe.Output, recipe.Credits))
+		for item, count := range recipe.Costs {
+			lines = append(lines, fmt.Sprintf("  %s x%d", item, count))
+		}
+	}
+	if len(lines) == 0 {
+		lines = append(lines, "No recipes loaded")
+	}
+	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 82, 220)
+	ebitenutil.DebugPrintAt(screen, "Craft action wiring is next economy slice", 82, 560)
+}
+
+func (a *App) drawMarketplace(screen *ebiten.Image) {
+	drawLargeText(screen, "MARKET", 72, 108)
+	lines := []string{
+		"Buy orders, sell orders, auctions, and direct trades use gameplay-originated items only.",
+		"Current slice exposes the station market surface before reducer-backed listings land.",
+		"",
+		"Tracked market examples:",
+	}
+	for _, loot := range a.catalog.Loot {
+		lines = append(lines, fmt.Sprintf("%s  base %d credits  %s", loot.Name, loot.BaseValue, loot.Rarity))
+	}
+	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 82, 220)
+	ebitenutil.DebugPrintAt(screen, "Enter returns", 82, 560)
 }
 
 func (a *App) drawCharacter(screen *ebiten.Image) {
@@ -299,6 +413,40 @@ func accountCredits(a *game.Account) int {
 		return 500
 	}
 	return a.Credits
+}
+
+func (a *App) weaponIDs() []string {
+	ids := make([]string, 0, len(a.catalog.Weapons))
+	for _, weapon := range a.catalog.Weapons {
+		if a.account == nil || a.account.Unlocks[weapon.ID] {
+			ids = append(ids, weapon.ID)
+		}
+	}
+	return ids
+}
+
+func (a *App) abilityIDs() []string {
+	ids := make([]string, 0, len(a.catalog.Abilities))
+	for _, ability := range a.catalog.Abilities {
+		if a.account == nil || a.account.Unlocks[ability.ID] {
+			ids = append(ids, ability.ID)
+		}
+	}
+	return ids
+}
+
+func (a *App) weaponName(id string) string {
+	if def, ok := a.catalog.WeaponByID[id]; ok {
+		return def.Name
+	}
+	return id
+}
+
+func (a *App) abilityName(id string) string {
+	if def, ok := a.catalog.AbilityByID[id]; ok {
+		return def.Name
+	}
+	return id
 }
 
 func appearanceColor(name string) color.RGBA {
