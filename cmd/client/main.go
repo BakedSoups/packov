@@ -29,6 +29,7 @@ type App struct {
 	player       game.PlayerID
 	account      *game.Account
 	loadout      game.Loadout
+	listings     []game.MarketplaceListing
 	seq          uint64
 	camera       game.Vec2
 	trails       []trail
@@ -189,6 +190,9 @@ func (a *App) pollNetwork() {
 			if msg.WorldEvent != nil {
 				a.run.Messages = append(a.run.Messages, "World event: "+msg.WorldEvent.Name)
 			}
+		case "market":
+			a.listings = msg.Listings
+			a.status = fmt.Sprintf("market listings %d", len(a.listings))
 		case "error":
 			a.status = "server error: " + msg.Error
 		}

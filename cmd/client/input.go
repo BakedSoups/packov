@@ -18,6 +18,7 @@ var trackedKeys = []ebiten.Key{
 	ebiten.KeyEnter,
 	ebiten.KeySpace,
 	ebiten.KeyEscape,
+	ebiten.KeyE,
 }
 
 func (a *App) justPressed(k ebiten.Key) bool {

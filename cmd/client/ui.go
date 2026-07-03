@@ -34,6 +34,7 @@ type menuState struct {
 	SettingsIdx int
 	LoadoutIdx  int
 	CraftIdx    int
+	MarketIdx   int
 }
 
 var (
@@ -76,6 +77,7 @@ func (a *App) updateMenu() {
 				a.screen = screenCrafting
 			case "Marketplace":
 				a.screen = screenMarketplace
+				a.requestMarket()
 			case "Character":
 				a.screen = screenCharacter
 			case "Settings":
@@ -88,10 +90,12 @@ func (a *App) updateMenu() {
 		a.updateCharacterEditor()
 	case screenLoadout:
 		a.updateLoadout()
-	case screenInventory, screenMarketplace:
+	case screenInventory:
 		if a.justPressed(ebiten.KeyEscape) || a.justPressed(ebiten.KeyEnter) || a.justPressed(ebiten.KeySpace) {
 			a.screen = screenStation
 		}
+	case screenMarketplace:
+		a.updateMarketplace()
 	case screenCrafting:
 		a.updateCrafting()
 	case screenSettings:
@@ -101,6 +105,71 @@ func (a *App) updateMenu() {
 			}
 		})
 	}
+}
+
+func (a *App) updateMarketplace() {
+	if a.justPressed(ebiten.KeyEscape) {
+		a.screen = screenStation
+		return
+	}
+	if a.justPressed(ebiten.KeyArrowUp) || a.justPressed(ebiten.KeyW) {
+		count := max(1, len(a.listings))
+		a.menu.MarketIdx = (a.menu.MarketIdx + count - 1) % count
+	}
+	if a.justPressed(ebiten.KeyArrowDown) || a.justPressed(ebiten.KeyS) {
+		count := max(1, len(a.listings))
+		a.menu.MarketIdx = (a.menu.MarketIdx + 1) % count
+	}
+	if a.justPressed(ebiten.KeyEnter) || a.justPressed(ebiten.KeySpace) {
+		a.buyOrCancelSelected()
+	}
+	if a.justPressed(ebiten.KeyE) {
+		a.sellFirstInventoryItem()
+	}
+}
+
+func (a *App) requestMarket() {
+	if a.net != nil && a.net.isOpen() && a.hello {
+		a.net.send(protocol.ClientMessage{Type: "market_list"})
+	}
+}
+
+func (a *App) buyOrCancelSelected() {
+	if len(a.listings) == 0 || a.menu.MarketIdx >= len(a.listings) {
+		return
+	}
+	listing := a.listings[a.menu.MarketIdx]
+	if a.net == nil || !a.net.isOpen() || !a.hello {
+		a.status = "market requires server"
+		return
+	}
+	msgType := "market_buy"
+	if listing.SellerID == a.player {
+		msgType = "market_cancel"
+	}
+	a.net.send(protocol.ClientMessage{Type: msgType, ListingID: listing.ID})
+}
+
+func (a *App) sellFirstInventoryItem() {
+	if a.account == nil {
+		return
+	}
+	for item, count := range a.account.Inventory.Items {
+		if count <= 0 {
+			continue
+		}
+		price := 25
+		if loot, ok := a.catalog.LootByID[item]; ok {
+			price = loot.BaseValue
+		}
+		if a.net == nil || !a.net.isOpen() || !a.hello {
+			a.status = "market requires server"
+			return
+		}
+		a.net.send(protocol.ClientMessage{Type: "market_sell", ItemID: item, Quantity: 1, UnitPrice: price})
+		return
+	}
+	a.status = "no inventory item to sell"
 }
 
 func (a *App) updateCrafting() {
@@ -372,13 +441,22 @@ func (a *App) drawCrafting(screen *ebiten.Image) {
 func (a *App) drawMarketplace(screen *ebiten.Image) {
 	drawLargeText(screen, "MARKET", 72, 108)
 	lines := []string{
-		"Buy orders, sell orders, auctions, and direct trades use gameplay-originated items only.",
-		"Current slice exposes the station market surface before reducer-backed listings land.",
+		"Enter buys selected listing or cancels your listing. E lists one inventory item.",
 		"",
-		"Tracked market examples:",
 	}
-	for _, loot := range a.catalog.Loot {
-		lines = append(lines, fmt.Sprintf("%s  base %d credits  %s", loot.Name, loot.BaseValue, loot.Rarity))
+	if len(a.listings) == 0 {
+		lines = append(lines, "No active listings")
+	}
+	for i, listing := range a.listings {
+		prefix := "  "
+		if i == a.menu.MarketIdx {
+			prefix = "> "
+		}
+		owner := ""
+		if listing.SellerID == a.player {
+			owner = " yours"
+		}
+		lines = append(lines, fmt.Sprintf("%s%s x%d @ %d%s", prefix, listing.ItemID, listing.Quantity, listing.UnitPrice, owner))
 	}
 	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 82, 220)
 	ebitenutil.DebugPrintAt(screen, "Enter returns", 82, 560)

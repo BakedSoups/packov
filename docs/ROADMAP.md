@@ -66,7 +66,7 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [x] Add loadout selection for weapons, abilities, and hulls.
 - [x] Add inventory screen.
 - [x] Add crafting screen with component requirements.
-- [ ] Add marketplace buy/sell/cancel screens.
+- [x] Add marketplace buy/sell/cancel screens.
 - [ ] Add planet selection and instant matchmaking.
 - [ ] Add daily/weekly mission panel.
 - [ ] Add player profile and progression screen.
