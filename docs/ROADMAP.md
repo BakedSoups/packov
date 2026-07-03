@@ -33,7 +33,7 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [x] Client applies authoritative server match/snapshot messages.
 - [x] Preserve local fallback when no server is available.
 - [ ] Add client-side interpolation between snapshots.
-- [ ] Add reconnect resume by token and active run ID.
+- [x] Add reconnect resume by token and active run ID.
 - [x] Add server-side input sequence validation and rate limits.
 - [x] Add loadout validation against account unlocks.
 

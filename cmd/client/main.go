@@ -178,6 +178,7 @@ func (a *App) pollNetwork() {
 				a.applySnapshot(*msg.Snapshot)
 				a.remote = true
 				a.screen = screenRun
+				a.queued = true
 				a.status = "authoritative server"
 			}
 		case "world_event":

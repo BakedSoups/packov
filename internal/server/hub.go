@@ -122,10 +122,27 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 		s.id, s.name, s.account = id, name, account
 		h.mu.Lock()
 		h.players[id] = s
+		if account.CurrentRun != "" {
+			if run := h.runs[account.CurrentRun]; run != nil {
+				s.runID = account.CurrentRun
+			}
+		}
 		h.mu.Unlock()
 		ev := h.event
 		missions := game.DailyMissions(time.Now())
-		return s.write(ctx, protocol.ServerMessage{Type: "hello", PlayerID: id, Account: &account, Catalog: h.catalog, WorldEvent: &ev, Missions: missions})
+		if err := s.write(ctx, protocol.ServerMessage{Type: "hello", PlayerID: id, Account: &account, Catalog: h.catalog, WorldEvent: &ev, Missions: missions}); err != nil {
+			return err
+		}
+		if s.runID != "" {
+			h.mu.RLock()
+			run := h.runs[s.runID]
+			h.mu.RUnlock()
+			if run != nil {
+				snap := run.Snapshot()
+				return s.write(ctx, protocol.ServerMessage{Type: "match", Snapshot: &snap})
+			}
+		}
+		return nil
 	case "queue":
 		if s.id == "" {
 			return fmt.Errorf("authenticate first")
@@ -156,6 +173,8 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 		for _, t := range group {
 			if ss := h.players[t.PlayerID]; ss != nil {
 				ss.runID = runID
+				ss.account.CurrentRun = runID
+				_ = h.store.SaveAccount(ctx, ss.account)
 			}
 		}
 		h.mu.Unlock()
@@ -274,6 +293,10 @@ func (h *Hub) step(ctx context.Context) {
 		for _, ps := range snap.Players {
 			if ss := h.session(ps.ID); ss != nil && ss.runID == r.ID {
 				_ = ss.write(ctx, protocol.ServerMessage{Type: "snapshot", Snapshot: &snap})
+				if snap.Phase == game.PhaseComplete || snap.Phase == game.PhaseFailed {
+					ss.account.CurrentRun = ""
+					_ = h.store.SaveAccount(ctx, ss.account)
+				}
 			}
 		}
 	}
