@@ -167,9 +167,10 @@ This roadmap tracks the path from the current foundation to a production-grade b
 ## Milestone 13: Ebitdock and Development Workflow
 
 - [ ] Keep the primary client as Go/Ebitengine compiled to WASM.
-- [ ] Use Ebitdock as the fast browser feedback loop for the Go client when available locally.
-- [ ] Add `make ebitdock` or equivalent script once the local Ebitdock command/API is confirmed.
-- [ ] Document how Ebitdock serves the WASM build, reloads client changes, and captures screenshots.
+- [x] Use Ebitdock as the fast browser feedback loop for the Go client when available locally.
+- [x] Add `make ebitdock` or equivalent script once the local Ebitdock command/API is confirmed.
+- [x] Document how Ebitdock serves the WASM build.
+- [ ] Add Ebitdock auto-reload hooks to the HTML shell.
 - [ ] Add Ebitdock smoke checks for menu navigation, character editor, station, matchmaking, and in-run rendering.
 - [ ] Ensure Ebitdock testing uses the same Go client codepath as production browser builds.
 - [ ] Keep generated artifacts ignored; source remains Go plus minimal HTML host shell.

@@ -1,0 +1,57 @@
+project: packov
+
+game:
+  package: ./cmd/client
+  output: ./web/game.wasm
+
+wasm:
+  exec: ./web/wasm_exec.js
+  dev_server: wasmserve
+  build_flags:
+    - -buildvcs=false
+
+docker:
+  compose_file: ./.ebitdock/compose.yaml
+  go_image: golang:1.24
+
+checks:
+  before_rebuild:
+    enabled: false
+    command: go test ./cmd/client
+
+services:
+  web:
+    root: ./web
+    port: 8093
+    image: nginx:1.27-alpine
+    workdir: /usr/share/nginx/html
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+    ports:
+      - name: web
+        port: 8093
+        url: http://localhost:8093
+    command: ""
+
+  api:
+    enabled: false
+    command: go run ./server
+    port: 3001
+    image: golang:1.24
+    workdir: /app
+    volumes:
+      - .:/app
+    ports:
+      - name: api
+        port: 3001
+        url: http://localhost:3001
+
+dashboard:
+  port: 8094
+
+watch:
+  rebuild:
+    - ./cmd/**/*.go
+    - ./internal/**/*.go
+  static:
+    - ./web/**

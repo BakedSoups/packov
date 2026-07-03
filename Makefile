@@ -1,4 +1,4 @@
-.PHONY: test server wasm docker-up docker-down fmt
+.PHONY: test server wasm docker-up docker-down fmt ebitdock ebitdock-down ebitdock-doctor
 
 test:
 	go test ./...
@@ -18,3 +18,12 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+ebitdock:
+	ebitdock dev
+
+ebitdock-down:
+	ebitdock down
+
+ebitdock-doctor:
+	ebitdock doctor

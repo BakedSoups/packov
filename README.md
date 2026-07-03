@@ -19,6 +19,15 @@ For WebAssembly output:
 make wasm
 ```
 
+For the Ebitdock browser feedback loop:
+
+```bash
+make ebitdock-doctor
+make ebitdock
+```
+
+Ebitdock serves the Go/Ebitengine WASM client from `web/` on `http://localhost:8093` and uses dashboard port `8094`. `ebitdock doctor` currently warns that the HTML shell does not use its auto-reload hooks yet.
+
 For the full local stack:
 
 ```bash
@@ -52,6 +61,7 @@ internal/server         Networking, sessions, matchmaking, persistence adapter
 content                 JSON gameplay content
 spacetime               SpaceTimeDB schema and reducer contract docs
 web                     Browser shell and generated wasm target
+ebitdock.yaml           Ebitdock WASM development shell config
 deploy/nginx            Nginx deployment config
 docs                    Architecture, schemas, roadmap, live-service plans
 ```
