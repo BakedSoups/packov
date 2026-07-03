@@ -113,6 +113,9 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 		if err != nil {
 			return err
 		}
+		if account.Appearance.Callsign == "" {
+			account.Appearance = game.DefaultAppearance(account.Name)
+		}
 		s.id, s.name, s.account = id, name, account
 		h.mu.Lock()
 		h.players[id] = s
@@ -176,8 +179,47 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 			return err
 		}
 		return s.write(ctx, protocol.ServerMessage{Type: "account", Account: &s.account})
+	case "appearance":
+		if s.id == "" {
+			return fmt.Errorf("authenticate first")
+		}
+		if err := validateAppearance(s.account, msg.Appearance); err != nil {
+			return err
+		}
+		s.account.Appearance = msg.Appearance
+		if s.account.Appearance.Callsign == "" {
+			s.account.Appearance.Callsign = s.name
+		}
+		if err := h.store.SaveAccount(ctx, s.account); err != nil {
+			return err
+		}
+		return s.write(ctx, protocol.ServerMessage{Type: "account", Account: &s.account})
 	}
 	return nil
+}
+
+func validateAppearance(account game.Account, appearance game.Appearance) error {
+	for _, cosmetic := range []string{appearance.Primary, appearance.Secondary, appearance.TrailID, appearance.NoseID, appearance.DroneSkin, appearance.BadgeID} {
+		if cosmetic == "" {
+			continue
+		}
+		if !ownsCosmetic(account, cosmetic) {
+			return fmt.Errorf("cosmetic %s is not owned", cosmetic)
+		}
+	}
+	if appearance.HullID != "" && !account.Unlocks[appearance.HullID] {
+		return fmt.Errorf("hull %s is not unlocked", appearance.HullID)
+	}
+	return nil
+}
+
+func ownsCosmetic(account game.Account, cosmetic string) bool {
+	for _, owned := range account.Cosmetics {
+		if owned == cosmetic {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *Hub) step(ctx context.Context) {

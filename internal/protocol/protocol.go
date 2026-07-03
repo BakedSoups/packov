@@ -3,14 +3,15 @@ package protocol
 import "packov/internal/game"
 
 type ClientMessage struct {
-	Type      string            `json:"type"`
-	Token     string            `json:"token,omitempty"`
-	Name      string            `json:"name,omitempty"`
-	PlanetID  string            `json:"planet_id,omitempty"`
-	Loadout   game.Loadout      `json:"loadout,omitempty"`
-	Input     game.InputCommand `json:"input,omitempty"`
-	RecipeID  string            `json:"recipe_id,omitempty"`
-	ListingID string            `json:"listing_id,omitempty"`
+	Type       string            `json:"type"`
+	Token      string            `json:"token,omitempty"`
+	Name       string            `json:"name,omitempty"`
+	PlanetID   string            `json:"planet_id,omitempty"`
+	Loadout    game.Loadout      `json:"loadout,omitempty"`
+	Appearance game.Appearance   `json:"appearance,omitempty"`
+	Input      game.InputCommand `json:"input,omitempty"`
+	RecipeID   string            `json:"recipe_id,omitempty"`
+	ListingID  string            `json:"listing_id,omitempty"`
 }
 
 type ServerMessage struct {

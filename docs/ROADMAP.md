@@ -78,10 +78,10 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [x] Add character/ship editor as a first-class Go/Ebitengine screen.
 - [x] Edit color palette, trail style, nose/module geometry, drone skin, and cosmetic badges.
 - [x] Preview the character/ship in a live primitive-rendered turntable scene.
-- [ ] Persist selected cosmetics to account state through SpaceTimeDB.
+- [x] Persist selected cosmetics to account state through the account persistence boundary.
 - [ ] Separate gameplay loadout from cosmetic appearance so cosmetics never affect power.
 - [ ] Add unlock-source labels for cosmetics: boss drop, event reward, guild reward, marketplace purchase, season reward.
-- [ ] Add validation so clients can only equip cosmetics owned by the account.
+- [x] Add validation so clients can only equip cosmetics owned by the account.
 - [ ] Add future hooks for guild emblems and seasonal frames.
 
 ## Milestone 6: Economy

@@ -520,7 +520,7 @@ func NewAccount(id PlayerID, name string) Account {
 		Level:       1,
 		Unlocks:     map[string]bool{"machine_gun": true, "dash": true, "hull_scout": true},
 		Inventory:   NewInventory(),
-		Cosmetics:   []string{"cyan", "white", "ion", "arrow", "standard", "founder"},
+		Cosmetics:   []string{"cyan", "white", "amber", "green", "violet", "red", "ion", "spark", "comet", "pulse", "arrow", "split", "needle", "standard", "orbital", "wing", "founder", "boss", "guild", "season"},
 		Appearance:  DefaultAppearance(name),
 		LastSeenUTC: time.Now().UTC(),
 	}

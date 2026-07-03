@@ -98,6 +98,7 @@ func (a *App) updateList(count int, activate func()) {
 
 func (a *App) updateCharacterEditor() {
 	if a.justPressed(ebiten.KeyEscape) {
+		a.syncAppearance()
 		a.screen = screenStation
 		return
 	}
@@ -156,6 +157,15 @@ func (a *App) deploy() {
 		return
 	}
 	a.startLocalRun()
+}
+
+func (a *App) syncAppearance() {
+	if a.account != nil {
+		a.account.Appearance = a.look
+	}
+	if a.net != nil && a.net.isOpen() && a.hello {
+		a.net.send(protocol.ClientMessage{Type: "appearance", Appearance: a.look})
+	}
 }
 
 func (a *App) startLocalRun() {
