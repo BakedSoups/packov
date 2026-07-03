@@ -25,7 +25,9 @@ type App struct {
 	catalog *game.Catalog
 	run     *game.RunState
 	net     *wsClient
+	screen  screenState
 	player  game.PlayerID
+	account *game.Account
 	seq     uint64
 	camera  game.Vec2
 	trails  []trail
@@ -34,6 +36,9 @@ type App struct {
 	remote  bool
 	hello   bool
 	queued  bool
+	menu    menuState
+	keys    map[ebiten.Key]bool
+	look    game.Appearance
 }
 
 type trail struct {
@@ -57,7 +62,8 @@ func newApp() *App {
 	player := game.PlayerID("local-pilot")
 	run.AddPlayer(player, "Pilot", game.DefaultLoadout())
 	run.SpawnInitial(c)
-	app := &App{catalog: c, run: run, player: player, started: time.Now(), status: "local fallback"}
+	look := game.DefaultAppearance("Pilot")
+	app := &App{catalog: c, run: run, player: player, started: time.Now(), status: "local fallback", screen: screenTitle, keys: map[ebiten.Key]bool{}, look: look}
 	if net, err := newWSClient(); err == nil {
 		app.net = net
 		app.status = "connecting"
@@ -69,7 +75,18 @@ func newApp() *App {
 
 func (a *App) Update() error {
 	a.pollNetwork()
+	defer a.captureKeys()
 	a.seq++
+	if a.screen != screenRun {
+		a.updateMenu()
+		a.updateTrails()
+		return nil
+	}
+	if a.justPressed(ebiten.KeyEscape) {
+		a.screen = screenStation
+		a.remote = false
+		return nil
+	}
 	move := game.Vec2{}
 	if ebiten.IsKeyPressed(ebiten.KeyW) {
 		move.Y--
@@ -108,6 +125,11 @@ func (a *App) Update() error {
 			}
 		}
 	}
+	a.updateTrails()
+	return nil
+}
+
+func (a *App) updateTrails() {
 	for i := range a.trails {
 		a.trails[i].TTL -= 1.0 / game.TickRate
 	}
@@ -118,7 +140,6 @@ func (a *App) Update() error {
 		}
 	}
 	a.trails = dst
-	return nil
 }
 
 func (a *App) pollNetwork() {
@@ -141,18 +162,22 @@ func (a *App) pollNetwork() {
 			if msg.PlayerID != "" {
 				a.player = msg.PlayerID
 			}
+			if msg.Account != nil {
+				a.account = msg.Account
+				a.look = msg.Account.Appearance
+				if a.look.Callsign == "" {
+					a.look = game.DefaultAppearance(msg.Account.Name)
+				}
+			}
 			if msg.Catalog != nil {
 				msg.Catalog.BuildIndexes()
 				a.catalog = msg.Catalog
-			}
-			if !a.queued {
-				a.queued = true
-				a.net.send(protocol.ClientMessage{Type: "queue", PlanetID: "verdant", Loadout: game.DefaultLoadout()})
 			}
 		case "match", "snapshot":
 			if msg.Snapshot != nil {
 				a.applySnapshot(*msg.Snapshot)
 				a.remote = true
+				a.screen = screenRun
 				a.status = "authoritative server"
 			}
 		case "world_event":
@@ -192,6 +217,10 @@ func (a *App) applySnapshot(s game.Snapshot) {
 
 func (a *App) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{8, 12, 18, 255})
+	if a.screen != screenRun {
+		a.drawMenu(screen)
+		return
+	}
 	a.drawGrid(screen)
 	a.drawMap(screen)
 	for _, t := range a.trails {

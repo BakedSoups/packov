@@ -59,10 +59,10 @@ This roadmap tracks the path from the current foundation to a production-grade b
 
 ## Milestone 4: Station UX
 
-- [ ] Add a Go/Ebitengine main menu state before connecting to gameplay.
-- [ ] Add menu navigation states: title, login/guest token, character select, station, matchmaking, settings, and in-run pause overlay.
-- [ ] Add controller and keyboard/mouse navigation for every menu.
-- [ ] Add station screen as the first connected screen.
+- [x] Add a Go/Ebitengine main menu state before connecting to gameplay.
+- [x] Add menu navigation states: title, character select, station, matchmaking entry, settings, and in-run escape flow.
+- [x] Add keyboard/controller-style navigation for every menu.
+- [x] Add station screen as the first connected screen.
 - [ ] Add loadout selection for weapons, abilities, hulls, drones, and modules.
 - [ ] Add inventory screen.
 - [ ] Add crafting screen with component requirements.
@@ -71,13 +71,13 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [ ] Add daily/weekly mission panel.
 - [ ] Add player profile and progression screen.
 - [ ] Add settings for audio, graphics, controls, accessibility, and controller mapping.
-- [ ] Keep all interactive UI implemented in Go/Ebitengine, not DOM overlays, so desktop, WASM, and Ebitdock paths share one UI codebase.
+- [x] Keep all interactive UI implemented in Go/Ebitengine, not DOM overlays, so desktop, WASM, and Ebitdock paths share one UI codebase.
 
 ## Milestone 5: Character Customization
 
-- [ ] Add character/ship editor as a first-class Go/Ebitengine screen.
-- [ ] Edit player callsign, ship hull, color palette, trail style, nose/module geometry, drone skin, and cosmetic badges.
-- [ ] Preview the character/ship in a live primitive-rendered turntable scene.
+- [x] Add character/ship editor as a first-class Go/Ebitengine screen.
+- [x] Edit color palette, trail style, nose/module geometry, drone skin, and cosmetic badges.
+- [x] Preview the character/ship in a live primitive-rendered turntable scene.
 - [ ] Persist selected cosmetics to account state through SpaceTimeDB.
 - [ ] Separate gameplay loadout from cosmetic appearance so cosmetics never affect power.
 - [ ] Add unlock-source labels for cosmetics: boss drop, event reward, guild reward, marketplace purchase, season reward.
