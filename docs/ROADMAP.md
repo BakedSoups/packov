@@ -70,7 +70,7 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [ ] Add planet selection and instant matchmaking.
 - [ ] Add daily/weekly mission panel.
 - [ ] Add player profile and progression screen.
-- [ ] Add settings for audio, graphics, controls, accessibility, and controller mapping.
+- [x] Add settings for graphics, controls, accessibility toggles, and controller enablement.
 - [x] Keep all interactive UI implemented in Go/Ebitengine, not DOM overlays, so desktop, WASM, and Ebitdock paths share one UI codebase.
 
 ## Milestone 5: Character Customization

@@ -102,8 +102,23 @@ func (a *App) updateMenu() {
 		a.updateList(len(settingsRows), func() {
 			if settingsRows[a.menu.Index] == "Back" {
 				a.screen = screenStation
+				return
 			}
+			a.toggleSetting(a.menu.Index)
 		})
+	}
+}
+
+func (a *App) toggleSetting(index int) {
+	switch index {
+	case 0:
+		a.settings.MouseAim = !a.settings.MouseAim
+	case 1:
+		a.settings.Controller = !a.settings.Controller
+	case 2:
+		a.settings.DamageNumbers = !a.settings.DamageNumbers
+	case 3:
+		a.settings.ScreenShake = !a.settings.ScreenShake
 	}
 }
 
@@ -476,8 +491,15 @@ func (a *App) drawCharacter(screen *ebiten.Image) {
 
 func (a *App) drawSettings(screen *ebiten.Image) {
 	drawLargeText(screen, "SETTINGS", 72, 108)
-	drawMenuList(screen, settingsRows, a.menu.Index, 82, 230)
-	ebitenutil.DebugPrintAt(screen, "Settings are Go/Ebitengine UI state and will persist through account settings.", 520, 250)
+	rows := []string{
+		"Mouse Aim      " + onOff(a.settings.MouseAim),
+		"Controller     " + onOff(a.settings.Controller),
+		"Damage Numbers " + onOff(a.settings.DamageNumbers),
+		"Screen Shake   " + onOff(a.settings.ScreenShake),
+		"Back",
+	}
+	drawMenuList(screen, rows, a.menu.Index, 82, 230)
+	ebitenutil.DebugPrintAt(screen, "Enter toggles selected setting", 520, 250)
 }
 
 func (a *App) drawShipPreview(screen *ebiten.Image, center game.Vec2, scale float64) {
@@ -537,6 +559,13 @@ func accountCredits(a *game.Account) int {
 		return 500
 	}
 	return a.Credits
+}
+
+func onOff(v bool) string {
+	if v {
+		return "ON"
+	}
+	return "OFF"
 }
 
 func (a *App) weaponIDs() []string {
