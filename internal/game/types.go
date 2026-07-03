@@ -113,6 +113,18 @@ type Loadout struct {
 	DroneID   string `json:"drone_id"`
 }
 
+type Appearance struct {
+	Callsign   string  `json:"callsign"`
+	HullID     string  `json:"hull_id"`
+	Primary    string  `json:"primary"`
+	Secondary  string  `json:"secondary"`
+	TrailID    string  `json:"trail_id"`
+	NoseID     string  `json:"nose_id"`
+	DroneSkin  string  `json:"drone_skin"`
+	BadgeID    string  `json:"badge_id"`
+	SpinOffset float64 `json:"spin_offset"`
+}
+
 type Account struct {
 	ID          PlayerID        `json:"id"`
 	Name        string          `json:"name"`
@@ -121,6 +133,7 @@ type Account struct {
 	Unlocks     map[string]bool `json:"unlocks"`
 	Inventory   Inventory       `json:"inventory"`
 	Cosmetics   []string        `json:"cosmetics"`
+	Appearance  Appearance      `json:"appearance"`
 	CurrentRun  string          `json:"current_run"`
 	LastSeenUTC time.Time       `json:"last_seen_utc"`
 }

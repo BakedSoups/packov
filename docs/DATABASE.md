@@ -2,7 +2,7 @@
 
 SpaceTimeDB tables are specified in `spacetime/schema.sql`. The schema is split by persistence concern:
 
-- Accounts: `player_account`, `inventory_stack`.
+- Accounts: `player_account`, `inventory_stack`, including cosmetic ownership and selected appearance JSON.
 - Runs: `run`, `run_player`, `entity_snapshot`.
 - Economy: `marketplace_listing`, `market_trade`.
 - Social/MMO: `guild`, `guild_member`, `chat_message`.
@@ -11,6 +11,7 @@ SpaceTimeDB tables are specified in `spacetime/schema.sql`. The schema is split 
 ## Persistence Rules
 
 - Account unlocks and station inventory persist immediately after crafting, marketplace trades, extraction, quest rewards, and cosmetic grants.
+- Appearance changes persist independently from gameplay loadouts and never affect combat calculations.
 - Carried loot only moves to station inventory during successful extraction.
 - Entity snapshots are sampled for audit, reconnect, analytics, and later replay tooling.
 - Marketplace trades are append-only for price history and fraud review.

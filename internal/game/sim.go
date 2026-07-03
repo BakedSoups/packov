@@ -496,6 +496,32 @@ func DefaultLoadout() Loadout {
 	return Loadout{WeaponID: "machine_gun", AbilityID: "dash", HullID: "hull_scout"}
 }
 
+func DefaultAppearance(name string) Appearance {
+	if name == "" {
+		name = "Pilot"
+	}
+	return Appearance{
+		Callsign:  name,
+		HullID:    "hull_scout",
+		Primary:   "cyan",
+		Secondary: "white",
+		TrailID:   "ion",
+		NoseID:    "arrow",
+		DroneSkin: "standard",
+		BadgeID:   "founder",
+	}
+}
+
 func NewAccount(id PlayerID, name string) Account {
-	return Account{ID: id, Name: name, Credits: 500, Level: 1, Unlocks: map[string]bool{"machine_gun": true, "dash": true, "hull_scout": true}, Inventory: NewInventory(), LastSeenUTC: time.Now().UTC()}
+	return Account{
+		ID:          id,
+		Name:        name,
+		Credits:     500,
+		Level:       1,
+		Unlocks:     map[string]bool{"machine_gun": true, "dash": true, "hull_scout": true},
+		Inventory:   NewInventory(),
+		Cosmetics:   []string{"cyan", "white", "ion", "arrow", "standard", "founder"},
+		Appearance:  DefaultAppearance(name),
+		LastSeenUTC: time.Now().UTC(),
+	}
 }

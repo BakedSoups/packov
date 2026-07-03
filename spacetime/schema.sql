@@ -9,6 +9,7 @@ CREATE TABLE player_account (
   level INT NOT NULL,
   unlocks JSON NOT NULL,
   cosmetics JSON NOT NULL,
+  appearance JSON NOT NULL,
   current_run TEXT,
   last_seen_utc TIMESTAMP NOT NULL
 );
