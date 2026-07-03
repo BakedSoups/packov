@@ -1,0 +1,61 @@
+{
+  "weapons": [
+    {"id":"machine_gun","name":"Machine Gun","damage":7,"cooldown_ms":80,"speed":720,"pellets":1,"spread":0.02,"range":760,"energy":0},
+    {"id":"shotgun","name":"Shotgun","damage":9,"cooldown_ms":520,"speed":590,"pellets":7,"spread":0.22,"range":420,"energy":0},
+    {"id":"railgun","name":"Railgun","damage":48,"cooldown_ms":980,"speed":1180,"pellets":1,"spread":0.005,"range":1150,"energy":18},
+    {"id":"laser","name":"Laser","damage":4,"cooldown_ms":35,"speed":940,"pellets":1,"spread":0,"range":620,"energy":2},
+    {"id":"flamethrower","name":"Flamethrower","damage":5,"cooldown_ms":45,"speed":280,"pellets":2,"spread":0.3,"range":240,"energy":1},
+    {"id":"rocket_launcher","name":"Rocket Launcher","damage":72,"cooldown_ms":1200,"speed":410,"pellets":1,"spread":0.03,"range":900,"energy":25},
+    {"id":"plasma_cannon","name":"Plasma Cannon","damage":34,"cooldown_ms":430,"speed":520,"pellets":1,"spread":0.04,"range":710,"energy":9}
+  ],
+  "abilities": [
+    {"id":"dash","name":"Dash","cooldown_ms":2400,"duration_ms":160,"power":390},
+    {"id":"shield","name":"Shield","cooldown_ms":11000,"duration_ms":4200,"power":70},
+    {"id":"drone","name":"Drone","cooldown_ms":18000,"duration_ms":14000,"power":16},
+    {"id":"turret","name":"Turret","cooldown_ms":22000,"duration_ms":18000,"power":18},
+    {"id":"emp","name":"EMP","cooldown_ms":15000,"duration_ms":1200,"power":210},
+    {"id":"heal_pulse","name":"Heal Pulse","cooldown_ms":13000,"duration_ms":0,"power":34}
+  ],
+  "enemies": [
+    {"id":"skitter","shape":"triangle","hp":24,"speed":145,"damage":12,"sense":560,"rarity":"common"},
+    {"id":"bulwark","shape":"square","hp":88,"speed":70,"damage":22,"sense":420,"rarity":"uncommon"},
+    {"id":"hex_spitter","shape":"hexagon","hp":42,"speed":95,"damage":16,"sense":690,"rarity":"rare"},
+    {"id":"octo_guardian","shape":"octagon","hp":145,"speed":55,"damage":34,"sense":510,"rarity":"epic"}
+  ],
+  "bosses": [
+    {"id":"hive_queen","name":"Hive Queen","hp":1600,"phase_hp":[0.7,0.35],"exclusive_loot":["hive_egg","queen_carapace"],"cosmetic_drop_ppm":90},
+    {"id":"ancient_mech","name":"Ancient Mech","hp":2200,"phase_hp":[0.75,0.5,0.25],"exclusive_loot":["ancient_ai_chip","mech_trophy"],"cosmetic_drop_ppm":55},
+    {"id":"void_leviathan","name":"Void Leviathan","hp":2600,"phase_hp":[0.66,0.33],"exclusive_loot":["void_crystal","leviathan_ring"],"cosmetic_drop_ppm":35},
+    {"id":"crystal_titan","name":"Crystal Titan","hp":2100,"phase_hp":[0.8,0.45],"exclusive_loot":["crystal_heart","titan_shard"],"cosmetic_drop_ppm":70},
+    {"id":"space_worm","name":"Space Worm","hp":1900,"phase_hp":[0.6,0.3],"exclusive_loot":["worm_scale","burrow_core"],"cosmetic_drop_ppm":75}
+  ],
+  "loot": [
+    {"id":"alien_alloy","name":"Alien Alloy","rarity":"common","base_value":18},
+    {"id":"plasma_battery","name":"Plasma Battery","rarity":"uncommon","base_value":75},
+    {"id":"quantum_core","name":"Quantum Core","rarity":"rare","base_value":210},
+    {"id":"hive_egg","name":"Hive Egg","rarity":"epic","base_value":420},
+    {"id":"void_crystal","name":"Void Crystal","rarity":"legendary","base_value":900},
+    {"id":"ancient_ai_chip","name":"Ancient AI Chip","rarity":"relic","base_value":1600},
+    {"id":"railgun_blueprint","name":"Railgun Blueprint","rarity":"rare","base_value":350},
+    {"id":"boss_trophy","name":"Boss Trophy","rarity":"legendary","base_value":1200}
+  ],
+  "recipes": [
+    {"id":"craft_railgun","output":"railgun","costs":{"plasma_battery":3,"quantum_core":2,"railgun_blueprint":1},"credits":1200},
+    {"id":"craft_plasma_cannon","output":"plasma_cannon","costs":{"plasma_battery":5,"void_crystal":1},"credits":2100},
+    {"id":"craft_drone","output":"drone","costs":{"ancient_ai_chip":1,"alien_alloy":15},"credits":1800}
+  ],
+  "planets": [
+    {"id":"verdant","name":"Verdant-9","type":"forest","threat":1,"resources":["alien_alloy","hive_egg"],"boss":"hive_queen","hazards":["spore_cloud"]},
+    {"id":"cinder","name":"Cinder Forge","type":"volcanic","threat":3,"resources":["plasma_battery","alien_alloy"],"boss":"ancient_mech","hazards":["lava_vents"]},
+    {"id":"umbra","name":"Umbra Rift","type":"moon","threat":5,"resources":["void_crystal","quantum_core"],"boss":"void_leviathan","hazards":["low_gravity","radiation"]},
+    {"id":"fractus","name":"Fractus Belt","type":"derelict_ship","threat":4,"resources":["ancient_ai_chip","quantum_core"],"boss":"space_worm","hazards":["breach_zones"]}
+  ],
+  "events": [
+    {"id":"meteor_shower","name":"Meteor Shower","duration_min":45,"modifiers":["falling_hazards","ore_bonus"]},
+    {"id":"alien_invasion","name":"Alien Invasion","duration_min":60,"modifiers":["enemy_density","guild_objective"]},
+    {"id":"black_hole","name":"Black Hole","duration_min":30,"modifiers":["gravity_wells","rare_loot"]},
+    {"id":"derelict_fleet","name":"Derelict Fleet","duration_min":90,"modifiers":["salvage_bonus","elite_patrols"]},
+    {"id":"radiation_storm","name":"Radiation Storm","duration_min":40,"modifiers":["shield_decay","mutation_loot"]},
+    {"id":"boss_rampage","name":"Boss Rampage","duration_min":75,"modifiers":["rotating_boss","community_progress"]}
+  ]
+}
