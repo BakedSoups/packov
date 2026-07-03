@@ -1,41 +1,161 @@
 # Development Roadmap
 
-## Milestone 1: Playable Vertical Slice
+This roadmap tracks the path from the current foundation to a production-grade browser MMO extraction shooter. Work should land in small commits that keep the game runnable after each milestone.
 
-- Replace full snapshots with delta updates.
-- Add server-side loadout validation against account unlocks.
-- Implement real SpaceTimeDB generated bindings for persistence.
-- Add party UI, station loadout UI, crafting UI, marketplace UI, and settings.
-- Add controller input mapping.
+## Current Status
 
-## Milestone 2: Extraction Depth
+- Shared Go simulation exists for combat, extraction, loot, crafting, planet generation, bosses, enemies, events, and inventory.
+- Go authoritative server exists with WebSocket sessions, matchmaking, snapshots, and a SpaceTimeDB persistence boundary.
+- Ebitengine/WebAssembly browser client exists with primitive rendering, twin-stick input, HUD, and local fallback simulation.
+- SpaceTimeDB schema and reducer contracts exist, but generated/native reducers are not implemented yet.
+- Docker Compose, Nginx config, and architecture/database docs exist.
 
-- Add objective completion logic and run scoring.
-- Add PvP extraction opt-in zones and anti-grief rules.
-- Add reconnect/resume into active run snapshots.
-- Add enemy director with heat, noise, and extraction-response budgets.
-- Add biome-specific hazards with telegraphs.
+## Build Order
 
-## Milestone 3: MMO Economy
+1. Finish authoritative client-server multiplayer.
+2. Implement real SpaceTimeDB persistence.
+3. Build station UI, inventory, crafting, marketplace, and settings.
+4. Complete extraction objectives, mining, carried loot capacity, and run results.
+5. Replace full snapshots with deltas and interest management.
+6. Expand boss mechanics and procedural planet generation.
+7. Add MMO social systems.
+8. Add live-service operations tooling.
+9. Harden for production deployment and load.
 
-- Add auctions, direct trades, guild banks, escrow, and market tax sinks.
-- Add market price history and fraud/anomaly audit tables.
-- Add daily/weekly quest persistence.
-- Add leaderboards by season and event.
+## Milestone 1: Authoritative Multiplayer
 
-## Milestone 4: World Bosses and Events
+- [x] Move wire messages into a shared protocol package.
+- [x] Add browser WebSocket transport.
+- [x] Client sends input commands instead of trusting local state when connected.
+- [x] Client applies authoritative server match/snapshot messages.
+- [x] Preserve local fallback when no server is available.
+- [ ] Add client-side interpolation between snapshots.
+- [ ] Add reconnect resume by token and active run ID.
+- [ ] Add server-side input sequence validation and rate limits.
+- [ ] Add loadout validation against account unlocks.
 
-- Add rotating boss schedule.
-- Add community progress bars and galaxy-wide unlocks.
-- Add exclusive component drops and ultra-rare cosmetics.
-- Add event-specific mission modifiers and map overlays.
+## Milestone 2: Real SpaceTimeDB Integration
 
-## Milestone 5: Live Operations
+- [ ] Choose the SpaceTimeDB module language for production reducers, likely Rust or TypeScript because Go modules are not supported by CLI 2.6.
+- [ ] Convert `spacetime/schema.sql` into native SpaceTimeDB table declarations.
+- [ ] Implement reducers from `spacetime/reducers.md`.
+- [ ] Generate bindings or bridge calls for the Go server.
+- [ ] Replace the in-memory fallback in `SpaceTimeDBAdapter`.
+- [ ] Persist accounts, inventory, marketplace, guilds, chat, events, run results, and leaderboard entries.
+- [ ] Add migration/versioning process for schema changes.
 
-- Add admin announcement reducers.
-- Add content hot-reload with catalog versioning.
-- Add telemetry dashboards for retention, economy, encounter difficulty, and matchmaking.
-- Add blue/green deployment and database migration tooling.
+## Milestone 3: Networking Scale
+
+- [ ] Replace full snapshots with entity create/update/delete deltas.
+- [ ] Quantize positions, rotations, velocities, HP, and phase values.
+- [ ] Add interest management by viewport, party, extraction zone, objectives, and boss encounters.
+- [ ] Split reliable events from unreliable high-rate state.
+- [ ] Add bandwidth metrics per session.
+- [ ] Add object pooling for server-side transient entities and encoded messages.
+- [ ] Add load tests for hundreds of simultaneous players.
+
+## Milestone 4: Station UX
+
+- [ ] Add station screen as the first connected screen.
+- [ ] Add loadout selection for weapons, abilities, hulls, drones, and modules.
+- [ ] Add inventory screen.
+- [ ] Add crafting screen with component requirements.
+- [ ] Add marketplace buy/sell/cancel screens.
+- [ ] Add planet selection and instant matchmaking.
+- [ ] Add daily/weekly mission panel.
+- [ ] Add player profile and progression screen.
+- [ ] Add settings for audio, graphics, controls, accessibility, and controller mapping.
+
+## Milestone 5: Economy
+
+- [ ] Implement marketplace listing creation.
+- [ ] Implement buy listing.
+- [ ] Implement cancel listing.
+- [ ] Implement auctions.
+- [ ] Implement direct player trades with escrow.
+- [ ] Add market price history and volume stats.
+- [ ] Add credit sinks: crafting fees, listing fees, guild upgrades, cosmetics, and station services.
+- [ ] Add fraud/anomaly audit tables and admin review tools.
+
+## Milestone 6: Progression
+
+- [ ] Add account XP and horizontal unlock tracks.
+- [ ] Add weapon unlock rules.
+- [ ] Add armor, hull, drone, ability, and module unlocks.
+- [ ] Add planet access requirements.
+- [ ] Enforce combat stat budgets so unlocks remain sidegrades.
+- [ ] Add blueprint/component crafting paths.
+- [ ] Add cosmetic unlocks that never affect gameplay.
+- [ ] Add seasonal progression with reset-safe account identity.
+
+## Milestone 7: Extraction Depth
+
+- [ ] Add objective completion logic.
+- [ ] Add mining/resource interaction.
+- [ ] Add carried loot capacity and extraction-risk decisions.
+- [ ] Add extraction defense scaling by party size, threat, and carried loot value.
+- [ ] Add run success/failure result screen.
+- [ ] Transfer carried loot to station inventory only on successful extraction.
+- [ ] Add PvP extraction opt-in zones and anti-grief rules.
+- [ ] Add enemy director with heat, noise, and extraction-response budgets.
+
+## Milestone 8: Boss Depth
+
+- [ ] Hive Queen: nests, swarm waves, acid zones, egg armor.
+- [ ] Ancient Mech: rotating laser arms, shield generators, missile salvos.
+- [ ] Void Leviathan: gravity wells, teleport dives, orbiting void mines.
+- [ ] Crystal Titan: reflective shields, shard prisons, fracture phases.
+- [ ] Space Worm: burrow attacks, segmented weak points, arena collapse.
+- [ ] Add exclusive component drops for every boss.
+- [ ] Add ultra-rare cosmetic drops.
+- [ ] Add rotating world boss schedule.
+
+## Milestone 9: Procedural Planets
+
+- [ ] Replace simple seeded placement with reusable map pieces.
+- [ ] Add biome-specific zones for forest, desert, ice, volcanic, moon, alien hive, abandoned facility, and derelict ship.
+- [ ] Add objective chains that create route choices.
+- [ ] Add hazards with readable telegraphs.
+- [ ] Persist deterministic seeds per run.
+- [ ] Apply world event modifiers to generation.
+- [ ] Add extraction-site variation and boss arenas.
+
+## Milestone 10: MMO Social
+
+- [ ] Global chat.
+- [ ] Party chat.
+- [ ] Guild chat.
+- [ ] Friends.
+- [ ] Party invites and join-in-progress rules.
+- [ ] Guild creation, roles, and membership.
+- [ ] Guild stations and shared upgrades.
+- [ ] Player profiles.
+- [ ] Leaderboards.
+- [ ] Trading.
+
+## Milestone 11: Live Service
+
+- [ ] Daily quests.
+- [ ] Weekly quests.
+- [ ] Rotating bosses.
+- [ ] Global world events.
+- [ ] Community progression.
+- [ ] Galaxy-wide unlocks.
+- [ ] Seasonal content model.
+- [ ] Holiday cosmetics.
+- [ ] Admin announcements.
+- [ ] Content catalog versioning and hot reload.
+
+## Milestone 12: Production Hardening
+
+- [ ] Docker health checks.
+- [ ] CI for Go tests, WASM build, Docker build, and config validation.
+- [ ] Browser smoke tests.
+- [ ] Playwright screenshots and canvas nonblank checks.
+- [ ] Structured telemetry for retention, economy, matchmaking, and encounter difficulty.
+- [ ] Graceful server drain and reconnect during deploys.
+- [ ] Blue/green deployment.
+- [ ] Backups and restore drills for SpaceTimeDB state.
 
 ## Future Expansion Ideas
 

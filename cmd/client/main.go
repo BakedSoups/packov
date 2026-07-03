@@ -13,6 +13,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"packov/internal/game"
+	"packov/internal/protocol"
 )
 
 const (
@@ -23,11 +24,16 @@ const (
 type App struct {
 	catalog *game.Catalog
 	run     *game.RunState
+	net     *wsClient
 	player  game.PlayerID
 	seq     uint64
 	camera  game.Vec2
 	trails  []trail
 	started time.Time
+	status  string
+	remote  bool
+	hello   bool
+	queued  bool
 }
 
 type trail struct {
@@ -51,10 +57,18 @@ func newApp() *App {
 	player := game.PlayerID("local-pilot")
 	run.AddPlayer(player, "Pilot", game.DefaultLoadout())
 	run.SpawnInitial(c)
-	return &App{catalog: c, run: run, player: player, started: time.Now()}
+	app := &App{catalog: c, run: run, player: player, started: time.Now(), status: "local fallback"}
+	if net, err := newWSClient(); err == nil {
+		app.net = net
+		app.status = "connecting"
+	} else {
+		app.status = "offline: " + err.Error()
+	}
+	return app
 }
 
 func (a *App) Update() error {
+	a.pollNetwork()
 	a.seq++
 	move := game.Vec2{}
 	if ebiten.IsKeyPressed(ebiten.KeyW) {
@@ -80,8 +94,12 @@ func (a *App) Update() error {
 		Ability:  ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight),
 		Extract:  ebiten.IsKeyPressed(ebiten.KeyE),
 	}
-	a.run.ApplyInput(cmd)
-	a.run.Step(a.catalog)
+	if a.remote && a.net != nil {
+		a.net.send(protocol.ClientMessage{Type: "input", Input: cmd})
+	} else {
+		a.run.ApplyInput(cmd)
+		a.run.Step(a.catalog)
+	}
 	if ps := a.run.Players[a.player]; ps != nil {
 		if e := a.run.Entities[ps.EntityID]; e != nil {
 			a.camera = e.Position
@@ -101,6 +119,75 @@ func (a *App) Update() error {
 	}
 	a.trails = dst
 	return nil
+}
+
+func (a *App) pollNetwork() {
+	if a.net == nil {
+		return
+	}
+	if a.net.isOpen() && !a.hello {
+		a.hello = true
+		a.net.send(protocol.ClientMessage{Type: "hello", Token: browserToken(), Name: "Pilot"})
+		a.status = "authenticating"
+	}
+	for {
+		msg, ok := a.net.next()
+		if !ok {
+			break
+		}
+		switch msg.Type {
+		case "hello":
+			a.status = "online"
+			if msg.PlayerID != "" {
+				a.player = msg.PlayerID
+			}
+			if msg.Catalog != nil {
+				msg.Catalog.BuildIndexes()
+				a.catalog = msg.Catalog
+			}
+			if !a.queued {
+				a.queued = true
+				a.net.send(protocol.ClientMessage{Type: "queue", PlanetID: "verdant", Loadout: game.DefaultLoadout()})
+			}
+		case "match", "snapshot":
+			if msg.Snapshot != nil {
+				a.applySnapshot(*msg.Snapshot)
+				a.remote = true
+				a.status = "authoritative server"
+			}
+		case "world_event":
+			if msg.WorldEvent != nil {
+				a.run.Messages = append(a.run.Messages, "World event: "+msg.WorldEvent.Name)
+			}
+		case "error":
+			a.status = "server error: " + msg.Error
+		}
+	}
+	if a.net.isClosed() && a.remote {
+		a.status = "disconnected, rendering last snapshot"
+	}
+}
+
+func (a *App) applySnapshot(s game.Snapshot) {
+	if a.run == nil {
+		a.run = &game.RunState{}
+	}
+	a.run.ID = s.RunID
+	a.run.Tick = s.Tick
+	a.run.Phase = s.Phase
+	a.run.Map = s.Map
+	a.run.Planet.Name = s.Planet
+	a.run.Entities = map[game.EntityID]*game.Entity{}
+	for i := range s.Entities {
+		e := s.Entities[i]
+		a.run.Entities[e.ID] = &e
+	}
+	a.run.Players = map[game.PlayerID]*game.PlayerState{}
+	for i := range s.Players {
+		p := s.Players[i]
+		a.run.Players[p.ID] = &p
+	}
+	a.run.Messages = s.Messages
 }
 
 func (a *App) Draw(screen *ebiten.Image) {
@@ -197,7 +284,7 @@ func (a *App) drawHUD(screen *ebiten.Image) {
 	lines := []string{
 		"PACKOV  " + strings.ToUpper(string(a.run.Phase)) + "  " + a.run.Planet.Name,
 		"WASD move  Mouse aim/fire  Space ability  E extract",
-		fmt.Sprintf("Tick %d  Entities %d  Runtime %s", a.run.Tick, len(a.run.Entities), time.Since(a.started).Truncate(time.Second)),
+		fmt.Sprintf("Tick %d  Entities %d  Runtime %s  Net %s", a.run.Tick, len(a.run.Entities), time.Since(a.started).Truncate(time.Second), a.status),
 	}
 	if ps != nil {
 		if e := a.run.Entities[ps.EntityID]; e != nil {

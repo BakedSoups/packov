@@ -39,6 +39,6 @@ func DefaultCatalogForClient() *Catalog {
 			{ID: "alien_invasion", Name: "Alien Invasion", DurationMin: 60, Modifiers: []string{"enemy_density", "guild_objective"}},
 		},
 	}
-	c.index()
+	c.BuildIndexes()
 	return c
 }

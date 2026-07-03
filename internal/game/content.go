@@ -15,11 +15,11 @@ func LoadCatalog(path string) (*Catalog, error) {
 	if err := json.Unmarshal(b, &c); err != nil {
 		return nil, err
 	}
-	c.index()
+	c.BuildIndexes()
 	return &c, c.Validate()
 }
 
-func (c *Catalog) index() {
+func (c *Catalog) BuildIndexes() {
 	c.WeaponByID = map[string]WeaponDef{}
 	c.AbilityByID = map[string]AbilityDef{}
 	c.EnemyByID = map[string]EnemyDef{}

@@ -13,6 +13,7 @@ import (
 	"github.com/coder/websocket"
 
 	"packov/internal/game"
+	"packov/internal/protocol"
 )
 
 type Hub struct {
@@ -66,7 +67,7 @@ func (h *Hub) Run(ctx context.Context) {
 			h.mu.Unlock()
 			if changed {
 				_ = h.store.PublishWorldEvent(ctx, ev)
-				h.broadcast(ServerMessage{Type: "world_event", WorldEvent: &ev})
+				h.broadcast(protocol.ServerMessage{Type: "world_event", WorldEvent: &ev})
 			}
 		}
 	}
@@ -86,18 +87,18 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return
 		}
-		var msg ClientMessage
+		var msg protocol.ClientMessage
 		if err := json.Unmarshal(b, &msg); err != nil {
-			s.write(ctx, ServerMessage{Type: "error", Error: "bad json"})
+			s.write(ctx, protocol.ServerMessage{Type: "error", Error: "bad json"})
 			continue
 		}
 		if err := h.handle(ctx, s, msg); err != nil {
-			s.write(ctx, ServerMessage{Type: "error", Error: err.Error()})
+			s.write(ctx, protocol.ServerMessage{Type: "error", Error: err.Error()})
 		}
 	}
 }
 
-func (h *Hub) handle(ctx context.Context, s *Session, msg ClientMessage) error {
+func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage) error {
 	switch msg.Type {
 	case "hello":
 		id := game.PlayerID(msg.Token)
@@ -118,7 +119,7 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg ClientMessage) error {
 		h.mu.Unlock()
 		ev := h.event
 		missions := game.DailyMissions(time.Now())
-		return s.write(ctx, ServerMessage{Type: "hello", PlayerID: id, Account: &account, Catalog: h.catalog, WorldEvent: &ev, Missions: missions})
+		return s.write(ctx, protocol.ServerMessage{Type: "hello", PlayerID: id, Account: &account, Catalog: h.catalog, WorldEvent: &ev, Missions: missions})
 	case "queue":
 		if s.id == "" {
 			return fmt.Errorf("authenticate first")
@@ -152,7 +153,7 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg ClientMessage) error {
 		snap := run.Snapshot()
 		for _, t := range group {
 			if ss := h.session(t.PlayerID); ss != nil {
-				_ = ss.write(ctx, ServerMessage{Type: "match", Snapshot: &snap})
+				_ = ss.write(ctx, protocol.ServerMessage{Type: "match", Snapshot: &snap})
 			}
 		}
 	case "input":
@@ -174,7 +175,7 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg ClientMessage) error {
 		if err := game.Craft(&s.account, recipe); err != nil {
 			return err
 		}
-		return s.write(ctx, ServerMessage{Type: "account", Account: &s.account})
+		return s.write(ctx, protocol.ServerMessage{Type: "account", Account: &s.account})
 	}
 	return nil
 }
@@ -192,7 +193,7 @@ func (h *Hub) step(ctx context.Context) {
 		_ = h.store.RecordRunSnapshot(ctx, snap)
 		for _, ps := range snap.Players {
 			if ss := h.session(ps.ID); ss != nil && ss.runID == r.ID {
-				_ = ss.write(ctx, ServerMessage{Type: "snapshot", Snapshot: &snap})
+				_ = ss.write(ctx, protocol.ServerMessage{Type: "snapshot", Snapshot: &snap})
 			}
 		}
 	}
@@ -204,7 +205,7 @@ func (h *Hub) session(id game.PlayerID) *Session {
 	return h.players[id]
 }
 
-func (h *Hub) broadcast(msg ServerMessage) {
+func (h *Hub) broadcast(msg protocol.ServerMessage) {
 	h.mu.RLock()
 	sessions := make([]*Session, 0, len(h.players))
 	for _, s := range h.players {
@@ -216,7 +217,7 @@ func (h *Hub) broadcast(msg ServerMessage) {
 	}
 }
 
-func (s *Session) write(ctx context.Context, msg ServerMessage) error {
+func (s *Session) write(ctx context.Context, msg protocol.ServerMessage) error {
 	if s.conn == nil {
 		return nil
 	}
