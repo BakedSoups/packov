@@ -1,0 +1,31 @@
+services:
+  spacetimedb:
+    image: clockworklabs/spacetime:latest
+    command: ["start", "--listen-addr", "0.0.0.0:3000"]
+    ports:
+      - "3000:3000"
+    volumes:
+      - spacetimedb_data:/stdb
+
+  app:
+    build: .
+    environment:
+      ADDR: ":8080"
+      SPACETIMEDB_ENDPOINT: "http://spacetimedb:3000"
+      SPACETIMEDB_DATABASE: "packov"
+    depends_on:
+      - spacetimedb
+    ports:
+      - "8080:8080"
+
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    ports:
+      - "8088:80"
+
+volumes:
+  spacetimedb_data:
