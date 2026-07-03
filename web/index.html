@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Packov</title>
+    <style>
+      html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #080c12;
+        color: #dce6f1;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      canvas {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+        image-rendering: auto;
+      }
+      #status {
+        position: fixed;
+        left: 16px;
+        bottom: 14px;
+        opacity: 0.8;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="status">Loading Packov WASM...</div>
+    <script src="wasm_exec.js"></script>
+    <script>
+      const go = new Go();
+      WebAssembly.instantiateStreaming(fetch("game.wasm"), go.importObject).then((result) => {
+        document.getElementById("status").remove();
+        go.run(result.instance);
+      }).catch((err) => {
+        document.getElementById("status").textContent = "Run `make wasm` to build web/game.wasm.";
+        console.error(err);
+      });
+    </script>
+  </body>
+</html>
