@@ -140,6 +140,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 7: Persistence and Economy Gaps
 
+- Status: SpaceTimeDB adapter now has a real HTTP reducer-call path with bearer-token support and strict mode; account save, snapshot recording, and world event publishing call reducer endpoints before updating the local fallback. Reducer/schema contracts include serialized account state. Native SpaceTimeDB module reducers, generated query bindings, durable market/trade history, and removing fallback reads remain.
 - Replace memory fallback with real SpaceTimeDB reducers/bindings.
 - Persist inventory, appearance, market listings, trades, run outcomes, daily missions, and world events.
 - Add market history and price averages.

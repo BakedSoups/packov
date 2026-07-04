@@ -18,6 +18,7 @@ sequenceDiagram
 ## Reducers
 
 - `upsert_player_account(player_id, display_name)`
+- `save_player_account(account_json)`
 - `save_inventory_stack(player_id, item_id, quantity)`
 - `create_run(run_id, planet_id, seed)`
 - `join_run(run_id, player_id, loadout_json)`

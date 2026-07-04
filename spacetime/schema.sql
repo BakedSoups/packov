@@ -14,6 +14,12 @@ CREATE TABLE player_account (
   last_seen_utc TIMESTAMP NOT NULL
 );
 
+CREATE TABLE player_account_state (
+  player_id TEXT PRIMARY KEY,
+  account_json JSON NOT NULL,
+  updated_utc TIMESTAMP NOT NULL
+);
+
 CREATE TABLE inventory_stack (
   player_id TEXT NOT NULL,
   item_id TEXT NOT NULL,
