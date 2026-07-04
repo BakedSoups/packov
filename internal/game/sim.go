@@ -274,7 +274,7 @@ func nearestObjective(nodes []Objective, position Vec2, radius float64) (int, bo
 func (r *RunState) fireWeapon(c *Catalog, ps *PlayerState, e *Entity) {
 	w := c.WeaponByID[ps.Loadout.WeaponID]
 	cooldownTicks := uint64(math.Ceil(float64(w.CooldownMS) / 1000 * TickRate))
-	if r.Tick-ps.LastShotAtTick < cooldownTicks {
+	if ps.LastShotAtTick != 0 && r.Tick-ps.LastShotAtTick < cooldownTicks {
 		return
 	}
 	ps.LastShotAtTick = r.Tick
@@ -706,7 +706,7 @@ func (r *RunState) updateRunOutcome() {
 
 func (r *RunState) cleanup(c *Catalog) {
 	for id, e := range r.Entities {
-		if e.TTL < 0 || e.HP <= 0 {
+		if e.TTL < 0 || (isDamageable(e.Kind) && e.HP <= 0) {
 			if e.Kind == EntityEnemy || e.Kind == EntityBoss {
 				if ps := r.Players[e.LastHitBy]; ps != nil {
 					ps.Stats.Kills++
@@ -728,6 +728,10 @@ func (r *RunState) cleanup(c *Catalog) {
 			}
 		}
 	}
+}
+
+func isDamageable(kind EntityKind) bool {
+	return kind == EntityPlayer || kind == EntityEnemy || kind == EntityBoss || kind == EntityDrone || kind == EntityTurret
 }
 
 func (r *RunState) spawnEnemy(def EnemyDef, pos Vec2) {

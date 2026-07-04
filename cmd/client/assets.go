@@ -129,70 +129,18 @@ func DrawAbilityEffect(screen *ebiten.Image, center game.Vec2, radius float64, t
 
 func DrawStationBackdrop(screen *ebiten.Image, center game.Vec2, tick uint64) {
 	t := float64(tick) / 60
-	for i := 0; i < 3; i++ {
-		rx := 165 + float64(i)*45
-		ry := 46 + float64(i)*14
-		alpha := uint8(100 + i*28)
-		strokeOrbit(screen, center, rx, ry, t*0.18+float64(i)*0.6, color.RGBA{55, 78, 98, alpha}, 4)
-	}
-	for i := 0; i < 4; i++ {
-		ang := t*0.35 + float64(i)*math.Pi/2
-		end := center.Add(game.V(math.Cos(ang)*125, math.Sin(ang)*34))
-		vector.StrokeLine(screen, float32(center.X), float32(center.Y), float32(end.X), float32(end.Y), 8, outlineColor(), false)
-		vector.StrokeLine(screen, float32(center.X), float32(center.Y), float32(end.X), float32(end.Y), 4, color.RGBA{80, 105, 128, 210}, false)
-		drawPolygonWithOutline(screen, end, 15, 4, -ang, color.RGBA{105, 132, 154, 230}, primitiveStyle.OutlineStroke-2)
-	}
-	drawPolygonWithOutline(screen, center, 54, 8, t*0.18, color.RGBA{37, 74, 96, 245}, primitiveStyle.OutlineStroke+1)
-	drawPolygonWithOutline(screen, center.Add(game.V(0, -6)), 30, 6, -t*0.25, color.RGBA{71, 190, 232, 235}, primitiveStyle.OutlineStroke-1)
-	drawOutlinedCircle(screen, center.Add(game.V(0, 4)), 13, color.RGBA{247, 205, 92, 245}, 4)
-
-	type orb struct {
-		p     game.Vec2
-		scale float64
-		front bool
-	}
-	orbs := make([]orb, 0, 9)
-	for i := 0; i < 9; i++ {
-		ang := t*(0.35+float64(i%3)*0.08) + float64(i)*math.Pi*2/9
-		depth := math.Sin(ang)
-		p := center.Add(game.V(math.Cos(ang)*(185+float64(i%3)*28), depth*(48+float64(i%2)*18)-12))
-		orbs = append(orbs, orb{p: p, scale: 0.75 + (depth+1)*0.28, front: depth > 0})
-	}
-	for _, orb := range orbs {
-		if !orb.front {
-			drawLivingOrb(screen, orb.p, orb.scale, false)
+	for ring := 0; ring < 4; ring++ {
+		radius := 72 + float64(ring)*42
+		count := 9 + ring*4
+		spin := t*(0.35+float64(ring)*0.13) + float64(ring)*0.8
+		vector.StrokeCircle(screen, float32(center.X), float32(center.Y), float32(radius), 2, color.RGBA{55, 78, 98, 72}, false)
+		for i := 0; i < count; i++ {
+			ang := spin + float64(i)*math.Pi*2/float64(count)
+			breathe := 1 + math.Sin(t*2+float64(i))*0.18
+			p := center.Add(game.FromAngle(ang).Mul(radius))
+			alpha := uint8(105 + ring*26)
+			drawOutlinedCircle(screen, p, (4+float64(ring))*breathe, color.RGBA{103, 228, 155, alpha}, 2)
 		}
 	}
-	for _, orb := range orbs {
-		if orb.front {
-			drawLivingOrb(screen, orb.p, orb.scale, true)
-		}
-	}
-}
-
-func strokeOrbit(screen *ebiten.Image, center game.Vec2, rx, ry, rotation float64, clr color.Color, stroke float32) {
-	const segments = 72
-	var prev game.Vec2
-	for i := 0; i <= segments; i++ {
-		ang := float64(i) * math.Pi * 2 / segments
-		p := game.V(math.Cos(ang)*rx, math.Sin(ang)*ry)
-		rotated := game.V(
-			p.X*math.Cos(rotation)-p.Y*math.Sin(rotation),
-			p.X*math.Sin(rotation)+p.Y*math.Cos(rotation),
-		).Add(center)
-		if i > 0 {
-			vector.StrokeLine(screen, float32(prev.X), float32(prev.Y), float32(rotated.X), float32(rotated.Y), stroke, clr, false)
-		}
-		prev = rotated
-	}
-}
-
-func drawLivingOrb(screen *ebiten.Image, center game.Vec2, scale float64, front bool) {
-	alpha := uint8(150)
-	if front {
-		alpha = 225
-	}
-	r := 12 * scale
-	drawOutlinedCircle(screen, center, r, color.RGBA{103, 228, 155, alpha}, 4)
-	vector.StrokeCircle(screen, float32(center.X), float32(center.Y), float32(r+7), 2, color.RGBA{103, 228, 155, alpha / 2}, false)
+	drawOutlinedCircle(screen, center, 10+math.Sin(t*3)*2, color.RGBA{247, 205, 92, 210}, 3)
 }

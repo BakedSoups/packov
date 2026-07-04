@@ -72,6 +72,36 @@ func TestRunProducesSnapshot(t *testing.T) {
 	}
 }
 
+func TestFireWeaponCreatesBulletImmediately(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("fire", c, "verdant", 42)
+	r.AddPlayer("p1", "pilot", DefaultLoadout())
+	player := r.Entities[r.Players["p1"].EntityID]
+	r.Tick = 1
+	r.ApplyInput(InputCommand{PlayerID: "p1", Aim: player.Position.Add(V(300, 0)), Fire: true})
+	r.Step(c)
+	if bulletCount(r) == 0 {
+		t.Fatal("expected first fire input to spawn a bullet immediately")
+	}
+}
+
+func TestCleanupKeepsZeroHPLootUntilTTL(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("loot-cleanup", c, "verdant", 42)
+	id := r.next()
+	r.Entities[id] = &Entity{ID: id, Kind: EntityLoot, DefID: "alien_alloy", Position: V(100, 100), Radius: 10, CarriedItem: "alien_alloy", TTL: 120}
+	r.cleanup(c)
+	if r.Entities[id] == nil {
+		t.Fatal("loot with zero HP should persist until picked up or TTL expires")
+	}
+}
+
 func TestSnapshotForPlayerFiltersDistantEntities(t *testing.T) {
 	c, err := LoadCatalog("../../content/game.json")
 	if err != nil {
@@ -444,6 +474,16 @@ func enemyCount(r *RunState) int {
 	count := 0
 	for _, e := range r.Entities {
 		if e.Kind == EntityEnemy {
+			count++
+		}
+	}
+	return count
+}
+
+func bulletCount(r *RunState) int {
+	count := 0
+	for _, e := range r.Entities {
+		if e.Kind == EntityBullet {
 			count++
 		}
 	}

@@ -136,7 +136,7 @@ func (a *App) Update() error {
 		Seq:      a.seq,
 		Move:     move,
 		Aim:      aim,
-		Fire:     ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft),
+		Fire:     ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) || ebiten.IsKeyPressed(ebiten.KeyJ),
 		Ability:  ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight),
 		Extract:  ebiten.IsKeyPressed(ebiten.KeyE),
 	}
@@ -481,7 +481,7 @@ func (a *App) drawHUD(screen *ebiten.Image) {
 	ps := a.run.Players[a.player]
 	lines := []string{
 		"PACKOV  " + strings.ToUpper(string(a.run.Phase)) + "  " + a.run.Planet.Name,
-		"WASD move  Mouse aim/fire  Space ability  E interact/extract",
+		"WASD move  Mouse aim/click or J fire  Space ability  E interact/extract",
 		fmt.Sprintf("Tick %d  Entities %d  Runtime %s  Net %s", a.run.Tick, len(a.run.Entities), time.Since(a.started).Truncate(time.Second), a.status),
 	}
 	if len(a.run.Messages) > 0 {
@@ -524,6 +524,12 @@ func (a *App) drawCombatHUD(screen *ebiten.Image) {
 	}
 	if player.HP/player.MaxHP < 0.28 && a.run.Tick%20 < 10 {
 		vector.StrokeRect(screen, 8, 8, screenW-16, screenH-16, 8, color.RGBA{255, 91, 94, 190}, false)
+	}
+	if ps.Downed || a.run.Phase == game.PhaseFailed {
+		vector.DrawFilledRect(screen, 0, 0, screenW, screenH, color.RGBA{60, 8, 14, 92}, false)
+		drawLargeText(screen, "RUN FAILED", screenW/2-150, screenH/2-48)
+		ebitenutil.DebugPrintAt(screen, "Carried loot lost. Account unlocks remain.", screenW/2-180, screenH/2+4)
+		ebitenutil.DebugPrintAt(screen, "Enter returns to station on the result screen.", screenW/2-190, screenH/2+28)
 	}
 	drawBar(screen, 28, screenH-72, 360, 22, player.HP/player.MaxHP, color.RGBA{80, 205, 104, 255}, "HULL")
 	drawBar(screen, 28, screenH-42, 360, 14, math.Min(1, player.Shield/100), color.RGBA{47, 178, 255, 255}, "SHIELD")
