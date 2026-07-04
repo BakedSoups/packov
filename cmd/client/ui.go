@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"sort"
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -478,7 +479,7 @@ func (a *App) drawCrafting(screen *ebiten.Image) {
 		if !a.canCraft(recipe) {
 			state = "MISSING"
 		}
-		lines = append(lines, fmt.Sprintf("%s%-18s %-16s %s", prefix, recipe.ID, recipe.Output, state))
+		lines = append(lines, fmt.Sprintf("%s%-13s %-18s %s", prefix, strings.ToUpper(recipe.Category), recipeName(recipe), state))
 	}
 	if len(lines) == 0 {
 		lines = append(lines, "No recipes loaded")
@@ -499,18 +500,20 @@ func (a *App) drawRecipeDetail(screen *ebiten.Image) {
 	recipe := a.catalog.Recipes[a.menu.CraftIdx]
 	x := float32(570)
 	y := float32(205)
-	vector.DrawFilledRect(screen, x-18, y-18, 560, 315, color.RGBA{18, 28, 38, 230}, false)
-	vector.StrokeRect(screen, x-18, y-18, 560, 315, 4, outlineColor(), false)
-	ebitenutil.DebugPrintAt(screen, "OUTPUT  "+recipe.Output, int(x), int(y))
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("CREDITS %d / %d", accountCredits(a.account), recipe.Credits), int(x), int(y+28))
+	vector.DrawFilledRect(screen, x-18, y-18, 560, 360, color.RGBA{18, 28, 38, 230}, false)
+	vector.StrokeRect(screen, x-18, y-18, 560, 360, 4, outlineColor(), false)
+	ebitenutil.DebugPrintAt(screen, strings.ToUpper(recipe.Category)+"  "+recipeName(recipe), int(x), int(y))
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("ROLE    %s", valueOr(recipe.Role, "sidegrade")), int(x), int(y+28))
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("CREDITS %d / %d", accountCredits(a.account), recipe.Credits), int(x), int(y+56))
 	ready := a.canCraft(recipe)
 	readyText := "READY"
 	if !ready {
 		readyText = "MISSING COMPONENTS"
 	}
-	ebitenutil.DebugPrintAt(screen, readyText, int(x), int(y+58))
-	rowY := y + 96
-	for item, need := range recipe.Costs {
+	ebitenutil.DebugPrintAt(screen, readyText, int(x), int(y+84))
+	rowY := y + 116
+	for _, item := range sortedCostKeys(recipe.Costs) {
+		need := recipe.Costs[item]
 		have := a.inventoryCount(item)
 		clr := color.RGBA{80, 205, 104, 255}
 		if have < need {
@@ -518,14 +521,49 @@ func (a *App) drawRecipeDetail(screen *ebiten.Image) {
 		}
 		vector.DrawFilledRect(screen, x, rowY+2, 16, 16, clr, false)
 		vector.StrokeRect(screen, x, rowY+2, 16, 16, 2, outlineColor(), false)
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%s  %d / %d", item, have, need), int(x+26), int(rowY))
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%s  %d / %d", a.lootName(item), have, need), int(x+26), int(rowY))
 		rowY += 28
 	}
-	if a.menu.CraftConfirm {
-		vector.DrawFilledRect(screen, x, y+252, 240, 30, color.RGBA{247, 205, 92, 240}, false)
-		vector.StrokeRect(screen, x, y+252, 240, 30, 3, outlineColor(), false)
-		ebitenutil.DebugPrintAt(screen, "CONFIRM CRAFT", int(x+16), int(y+260))
+	ebitenutil.DebugPrintAt(screen, "SOURCE  "+valueOr(recipe.Source, "gameplay drops"), int(x), int(y+250))
+	if recipe.Blueprint != "" {
+		ebitenutil.DebugPrintAt(screen, "PRINT   "+a.lootName(recipe.Blueprint)+" / "+valueOr(recipe.BlueprintSource, "drop"), int(x), int(y+275))
 	}
+	ebitenutil.DebugPrintAt(screen, "RULE    "+valueOr(recipe.TradeRule, "components tradable, unlock bound"), int(x), int(y+300))
+	if a.menu.CraftConfirm {
+		vector.DrawFilledRect(screen, x+300, y+312, 220, 30, color.RGBA{247, 205, 92, 240}, false)
+		vector.StrokeRect(screen, x+300, y+312, 220, 30, 3, outlineColor(), false)
+		ebitenutil.DebugPrintAt(screen, "CONFIRM CRAFT", int(x+316), int(y+320))
+	}
+}
+
+func sortedCostKeys(costs map[string]int) []string {
+	keys := make([]string, 0, len(costs))
+	for item := range costs {
+		keys = append(keys, item)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func recipeName(recipe game.RecipeDef) string {
+	if recipe.OutputName != "" {
+		return recipe.OutputName
+	}
+	return recipe.Output
+}
+
+func valueOr(value, fallback string) string {
+	if value != "" {
+		return value
+	}
+	return fallback
+}
+
+func (a *App) lootName(item string) string {
+	if loot, ok := a.catalog.LootByID[item]; ok {
+		return loot.Name
+	}
+	return item
 }
 
 func (a *App) canCraft(recipe game.RecipeDef) bool {

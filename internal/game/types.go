@@ -56,17 +56,30 @@ type BossDef struct {
 }
 
 type LootDef struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Rarity    Rarity `json:"rarity"`
-	BaseValue int    `json:"base_value"`
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	Rarity    Rarity   `json:"rarity"`
+	BaseValue int      `json:"base_value"`
+	Tags      []string `json:"tags,omitempty"`
+	Source    string   `json:"source,omitempty"`
+	Tradable  bool     `json:"tradable"`
+	Bound     bool     `json:"bound,omitempty"`
 }
 
 type RecipeDef struct {
-	ID      string         `json:"id"`
-	Output  string         `json:"output"`
-	Costs   map[string]int `json:"costs"`
-	Credits int            `json:"credits"`
+	ID              string         `json:"id"`
+	Output          string         `json:"output"`
+	OutputName      string         `json:"output_name,omitempty"`
+	Category        string         `json:"category"`
+	UnlockType      string         `json:"unlock_type,omitempty"`
+	Blueprint       string         `json:"blueprint,omitempty"`
+	BlueprintSource string         `json:"blueprint_source,omitempty"`
+	Source          string         `json:"source,omitempty"`
+	Role            string         `json:"role,omitempty"`
+	TradeRule       string         `json:"trade_rule,omitempty"`
+	StatHint        string         `json:"stat_hint,omitempty"`
+	Costs           map[string]int `json:"costs"`
+	Credits         int            `json:"credits"`
 }
 
 type PlanetDef struct {

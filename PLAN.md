@@ -147,6 +147,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 7A: Crafting and Progression Tree
 
+- Status: recipe graph data model, component tags, blueprint gates, source hints, trade rules, boss components, and branch coverage are implemented in the shared catalog; crafting UI now shows category/source/blueprint/trade metadata with stable ingredient ordering. Visual node graph, provenance audit, and persistence-specific unlock tables remain.
 - Yes: the game needs an explicit tree that turns enemy drops and boss components into usable unlocks.
 - The tree should be horizontal, not raw power creep. Crafted gear should unlock roles, playstyles, counters, utility, cosmetics, and access rather than strictly higher damage.
 - Item flow should be:

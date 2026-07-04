@@ -20,6 +20,40 @@ func TestCraftConsumesComponents(t *testing.T) {
 	}
 }
 
+func TestCatalogIncludesCraftingProgressionTree(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	categories := map[string]int{}
+	for _, recipe := range c.Recipes {
+		categories[recipe.Category]++
+		if recipe.Blueprint == "" {
+			t.Fatalf("recipe %s should declare blueprint gate", recipe.ID)
+		}
+		if recipe.Source == "" || recipe.BlueprintSource == "" || recipe.TradeRule == "" || recipe.StatHint == "" {
+			t.Fatalf("recipe %s missing progression metadata: %+v", recipe.ID, recipe)
+		}
+	}
+	for _, category := range []string{"weapon", "armor", "hull", "drone", "module", "ability", "cosmetic", "planet_access"} {
+		if categories[category] == 0 {
+			t.Fatalf("missing recipe category %s", category)
+		}
+	}
+	for _, item := range []string{"hive_egg", "queen_carapace", "rail_actuator", "void_crystal", "phase_membrane", "seismic_tooth"} {
+		loot, ok := c.LootByID[item]
+		if !ok {
+			t.Fatalf("missing boss component %s", item)
+		}
+		if !hasTag(loot.Tags, "boss_component") {
+			t.Fatalf("%s should be tagged as boss_component: %+v", item, loot.Tags)
+		}
+		if loot.Source == "" {
+			t.Fatalf("%s should describe where to find it", item)
+		}
+	}
+}
+
 func TestRunProducesSnapshot(t *testing.T) {
 	c, err := LoadCatalog("../../content/game.json")
 	if err != nil {
@@ -225,4 +259,13 @@ func enemyMinDistance(r *RunState) float64 {
 		}
 	}
 	return best
+}
+
+func hasTag(tags []string, want string) bool {
+	for _, tag := range tags {
+		if tag == want {
+			return true
+		}
+	}
+	return false
 }
