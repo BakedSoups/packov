@@ -137,6 +137,85 @@ This file captures the current hands-on gameplay notes and the next improvements
 - Accessibility: colorblind-safe rarity colors, screen shake toggle, readable outlines, scalable HUD.
 - Browser smoke tests and screenshot checks for menu, station, combat, death, extraction, and marketplace.
 
+## Priority 9: Missing Moment-to-Moment Gameplay
+
+- Real weapon identities are missing; most weapons still behave like generic projectiles in practice.
+- Abilities need readable cooldown UI, activation effects, and tactical roles.
+- Enemy attacks need telegraphs, windups, cooldowns, and clear hit moments.
+- Boss encounters need arenas, mechanics, weak points, phase telegraphs, and exclusive reward presentation.
+- Resource mining needs an interaction, progress timing, interruption rules, and yield feedback.
+- Loot needs pickup text, rarity presentation, stack value, and clear difference between carried and banked inventory.
+- Hazards need readable warnings and real gameplay consequences.
+- Extraction should have a visible beacon, countdown, wave intensity, and risk/reward escalation.
+- Player movement needs acceleration/friction tuning, dash feel, collision response, and controller tuning.
+- There is no revive/downed co-op loop yet; co-op failure is too binary.
+
+## Priority 10: Missing Station and UX Flow
+
+- Title/login flow needs player naming, account token visibility, and reconnect feedback.
+- Station needs a clearer information hierarchy: deploy, loadout, inventory, crafting, market, profile, missions.
+- Loadout screen needs stat comparisons and sidegrade tradeoff explanations.
+- Crafting needs a confirmation state, missing-component routing, and blueprint discovery.
+- Marketplace needs listing detail, sorting, filtering, price history, and sell quantity/price controls.
+- Character editor needs callsign editing, unlock source labels, ownership locks, and cosmetic preview categories.
+- Planet selection needs event banners, party readiness, boss rotation, resource preview, and threat explanation.
+- Settings need persistence, rebinding, audio controls, accessibility controls, and controller testing.
+- Result screen needs stat breakdown, rewards, lost loot, unlock progress, and next-action buttons.
+
+## Priority 11: Missing Backend and Persistence
+
+- SpaceTimeDB integration is still a contract/fallback, not real production persistence.
+- Accounts need secure identity, session tokens, reconnect expiry, and abuse protection.
+- Run settlement needs durable audit events, idempotency keys, and replay-safe reward application.
+- Marketplace data needs persistence, listing expiration, trade history, and rollback/audit tooling.
+- World events need server scheduling, persistence, notifications, and community progress reducers.
+- Guilds, friends, chat, profiles, and leaderboards need real tables/reducers and moderation controls.
+- Content data needs versioning so client/server catalogs cannot mismatch silently.
+- Admin/live-ops tools are missing: announcements, event creation, grants, bans, economy inspection.
+- Observability is missing: metrics, logs, traces, tick time, bandwidth, errors, economy movement.
+
+## Priority 12: Missing Multiplayer Scale Work
+
+- Full snapshots are still the main network path; this will not scale to large player counts.
+- Need entity deltas: create/update/delete, quantized positions, and compressed state.
+- Need interest management by camera, party, objective, extraction zone, and boss arena.
+- Need reliable versus unreliable channels or equivalent message separation.
+- Need server-side lag handling, input buffering, client interpolation tuning, and disconnect grace.
+- Need object pools for bullets, particles, enemies, network messages, and temporary slices.
+- Need load tests with simulated clients and profiling of tick CPU, allocations, and bandwidth.
+- Need anti-cheat validation beyond basic loadout/input checks.
+
+## Priority 13: Missing Content Pipeline
+
+- Content files need schema validation and tests.
+- Need separate data files for weapons, abilities, enemies, bosses, loot, recipes, planets, events, cosmetics, and missions.
+- Need designer-friendly balancing fields: budget, role, counters, rarity, unlock source, event tags.
+- Need hot reload or catalog version rollout for live service.
+- Need content migration/versioning for accounts that own old items.
+- Need debug commands to spawn enemies, grant loot, force events, and jump to boss fights.
+- Need asset preview screen for all primitive art definitions.
+
+## Priority 14: Missing Audio and Feel
+
+- No audio layer yet.
+- Need weapon sounds, enemy hit sounds, player damage sounds, loot pickup, crafting, market, menu selection, extraction alarm, boss phase stingers.
+- Need screen shake with setting toggle and intensity caps.
+- Need impact particles, muzzle flashes, shield impacts, explosion rings, and death bursts.
+- Need music plan: station ambience, planet loop, extraction intensity, boss track, result stingers.
+- Need haptic/controller rumble hooks where supported.
+
+## Priority 15: Missing Quality and Release Infrastructure
+
+- Need CI that runs Go tests, WASM build, Docker build, docker compose config, content validation, and linting.
+- Need Playwright/Ebitdock smoke tests for title, station, character editor, deploy, combat, death, extraction, crafting, and market.
+- Need screenshot/canvas nonblank checks after every visual change.
+- Need browser compatibility checks for Chrome, Firefox, Safari where possible.
+- Need production Docker health checks and graceful shutdown/drain.
+- Need backup/restore drills once SpaceTimeDB persistence is real.
+- Need staging environment and deployment documentation.
+- Need error reporting from browser clients.
+- Need performance budgets for FPS, memory, server tick time, and network bandwidth.
+
 ## Suggested Next Commit Order
 
 1. Fix enemy contact states and remove jitter at melee range.
@@ -144,7 +223,12 @@ This file captures the current hands-on gameplay notes and the next improvements
 3. Stabilize crafting input and recipe detail UI.
 4. Add primitive asset API and style tokens.
 5. Prototype Go-only 3D-looking station backdrop.
-6. Decide whether to integrate Three.js for menu-only decorative background.
+6. Add weapon-specific projectile primitives and hit effects.
 7. Add objective interaction system.
-8. Add run result stat breakdown.
-9. Move persistence from memory fallback to real SpaceTimeDB reducers.
+8. Add extraction countdown/wave telegraphs.
+9. Add run result stat breakdown.
+10. Add planet selection and mission panels.
+11. Decide whether to integrate Three.js for menu-only decorative background.
+12. Move persistence from memory fallback to real SpaceTimeDB reducers.
+13. Replace full snapshots with deltas and interest management.
+14. Add CI and browser smoke tests.
