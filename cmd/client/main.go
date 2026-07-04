@@ -154,6 +154,7 @@ func (a *App) settleLocalRun() {
 		for item, count := range ps.Carried.Items {
 			a.account.Inventory.Add(item, count)
 		}
+		a.account.Credits += ps.Stats.CreditsEarned
 	}
 }
 

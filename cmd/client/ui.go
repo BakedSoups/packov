@@ -747,6 +747,14 @@ func (a *App) drawRunResult(screen *ebiten.Image) {
 				lines = append(lines, "Extraction: failed")
 				lines = append(lines, "Carried loot was lost. Unlocks, cosmetics, and account progress remain.")
 			}
+			lines = append(lines, "")
+			lines = append(lines, fmt.Sprintf("Kills: %d", ps.Stats.Kills))
+			lines = append(lines, fmt.Sprintf("Objectives: %d", ps.Stats.ObjectivesCompleted))
+			lines = append(lines, fmt.Sprintf("Resources mined: %d", ps.Stats.ResourcesMined))
+			lines = append(lines, fmt.Sprintf("Boss damage: %.0f", ps.Stats.BossDamage))
+			lines = append(lines, fmt.Sprintf("Loot extracted value: %d cr", ps.Stats.LootExtractedValue))
+			lines = append(lines, fmt.Sprintf("Loot lost value: %d cr", ps.Stats.LootLostValue))
+			lines = append(lines, fmt.Sprintf("Credits earned: %d", ps.Stats.CreditsEarned))
 			lines = append(lines, fmt.Sprintf("Carried at result: %v", ps.Carried.Items))
 		}
 		if len(a.run.Messages) > 0 {

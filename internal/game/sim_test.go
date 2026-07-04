@@ -168,6 +168,9 @@ func TestObjectiveInteractionCompletesObjective(t *testing.T) {
 	if !r.Map.Objectives[0].Done {
 		t.Fatalf("expected objective complete, progress %.2f", r.Map.Objectives[0].Progress)
 	}
+	if ps.Stats.ObjectivesCompleted != 1 {
+		t.Fatalf("expected objective stat, got %+v", ps.Stats)
+	}
 }
 
 func TestMiningResourceAddsCarriedLoot(t *testing.T) {
@@ -190,6 +193,67 @@ func TestMiningResourceAddsCarriedLoot(t *testing.T) {
 	}
 	if ps.Carried.Items[resource.Kind] != 1 {
 		t.Fatalf("expected carried %s, got %+v", resource.Kind, ps.Carried.Items)
+	}
+	if ps.Stats.ResourcesMined != 1 {
+		t.Fatalf("expected mining stat, got %+v", ps.Stats)
+	}
+}
+
+func TestExtractionStatsValueAndCredits(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("extract-stats", c, "verdant", 42)
+	r.AddPlayer("p1", "pilot", DefaultLoadout())
+	ps := r.Players["p1"]
+	ps.Carried.Add("alien_alloy", 4)
+	ps.Stats.Kills = 2
+	ps.Stats.ObjectivesCompleted = 1
+	ps.Stats.ResourcesMined = 1
+	ps.Extracting = true
+	ps.ExtractStart = r.Tick
+	for i := 0; i < TickRate*46; i++ {
+		r.Step(c)
+	}
+	if !ps.Extracted {
+		t.Fatal("expected player extracted")
+	}
+	if ps.Stats.LootExtractedValue != 72 {
+		t.Fatalf("expected loot value 72, got %+v", ps.Stats)
+	}
+	if ps.Stats.CreditsEarned != 198 {
+		t.Fatalf("expected credits 198, got %+v", ps.Stats)
+	}
+}
+
+func TestDownedStatsRecordLostLootValue(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("lost-value", c, "verdant", 42)
+	r.AddPlayer("p1", "pilot", DefaultLoadout())
+	ps := r.Players["p1"]
+	ps.Carried.Add("alien_alloy", 3)
+	player := r.Entities[ps.EntityID]
+	player.Position = V(500, 500)
+	def := c.EnemyByID["skitter"]
+	r.spawnEnemy(def, V(500, 500))
+	for _, e := range r.Entities {
+		if e.Kind == EntityEnemy {
+			e.AIState = AILunge
+			e.StateTick = 0
+			e.Damage = 200
+		}
+	}
+	r.Tick = 5
+	r.resolveCombat(c)
+	if ps.Stats.LootLostValue != 54 {
+		t.Fatalf("expected lost loot value 54, got %+v", ps.Stats)
+	}
+	if len(ps.Carried.Items) != 0 {
+		t.Fatalf("expected carried loot cleared, got %+v", ps.Carried.Items)
 	}
 }
 

@@ -40,6 +40,17 @@ type Entity struct {
 	StateTick   uint64     `json:"state_tick,omitempty"`
 	NextAction  uint64     `json:"next_action,omitempty"`
 	HitTick     uint64     `json:"hit_tick,omitempty"`
+	LastHitBy   PlayerID   `json:"last_hit_by,omitempty"`
+}
+
+type RunStats struct {
+	Kills               int     `json:"kills"`
+	ObjectivesCompleted int     `json:"objectives_completed"`
+	ResourcesMined      int     `json:"resources_mined"`
+	BossDamage          float64 `json:"boss_damage"`
+	LootExtractedValue  int     `json:"loot_extracted_value"`
+	LootLostValue       int     `json:"loot_lost_value"`
+	CreditsEarned       int     `json:"credits_earned"`
 }
 
 type PlayerState struct {
@@ -54,6 +65,7 @@ type PlayerState struct {
 	ExtractStart    uint64    `json:"extract_start"`
 	Extracted       bool      `json:"extracted"`
 	Downed          bool      `json:"downed"`
+	Stats           RunStats  `json:"stats"`
 }
 
 type RunPhase string
@@ -225,6 +237,7 @@ func (r *RunState) updateObjectiveInteraction(ps *PlayerState, e *Entity, dt flo
 		obj.Progress = math.Min(1, obj.Progress+dt/3.0)
 		if obj.Progress >= 1 && !obj.Done {
 			obj.Done = true
+			ps.Stats.ObjectivesCompleted++
 			r.Messages = append(r.Messages, ps.Name+" completed "+obj.Kind+".")
 		}
 		return
@@ -234,6 +247,7 @@ func (r *RunState) updateObjectiveInteraction(ps *PlayerState, e *Entity, dt flo
 		node.Progress = math.Min(1, node.Progress+dt/1.4)
 		if node.Progress >= 1 && !node.Done {
 			node.Done = true
+			ps.Stats.ResourcesMined++
 			ps.Carried.Add(node.Kind, 1)
 			r.Messages = append(r.Messages, ps.Name+" mined "+node.Kind+".")
 		}
@@ -575,8 +589,15 @@ func (r *RunState) resolveCombat(c *Catalog) {
 				continue
 			}
 			if b.Owner != "" && (target.Kind == EntityEnemy || target.Kind == EntityBoss) && Dist(b.Position, target.Position) < b.Radius+target.Radius {
-				target.HP -= b.Damage
+				damage := math.Min(target.HP, b.Damage)
+				target.HP -= damage
 				target.HitTick = r.Tick
+				target.LastHitBy = b.Owner
+				if target.Kind == EntityBoss {
+					if ps := r.Players[b.Owner]; ps != nil {
+						ps.Stats.BossDamage += damage
+					}
+				}
 				b.TTL = -1
 				break
 			}
@@ -612,6 +633,7 @@ func (r *RunState) resolveCombat(c *Catalog) {
 				player.HitTick = r.Tick
 				if player.HP <= 0 {
 					ps.Downed = true
+					ps.Stats.LootLostValue += inventoryValue(c, ps.Carried)
 					ps.Carried = NewInventory()
 					r.Messages = append(r.Messages, ps.Name+" lost carried loot.")
 				}
@@ -627,6 +649,8 @@ func (r *RunState) updateExtraction(c *Catalog) {
 			anyExtracting = true
 			if r.Tick-ps.ExtractStart > uint64(TickRate*45) {
 				ps.Extracted = true
+				ps.Stats.LootExtractedValue = inventoryValue(c, ps.Carried)
+				ps.Stats.CreditsEarned = creditReward(ps)
 				r.Messages = append(r.Messages, ps.Name+" extracted.")
 			}
 		}
@@ -683,6 +707,9 @@ func (r *RunState) cleanup(c *Catalog) {
 	for id, e := range r.Entities {
 		if e.TTL < 0 || e.HP <= 0 {
 			if e.Kind == EntityEnemy || e.Kind == EntityBoss {
+				if ps := r.Players[e.LastHitBy]; ps != nil {
+					ps.Stats.Kills++
+				}
 				r.dropLoot(c, e.Position, e.Kind == EntityBoss)
 			}
 			delete(r.Entities, id)
@@ -734,6 +761,20 @@ func (r *RunState) dropLoot(c *Catalog, pos Vec2, boss bool) {
 	}
 	id := r.next()
 	r.Entities[id] = &Entity{ID: id, Kind: EntityLoot, DefID: item, Position: pos, Radius: 10, CarriedItem: item, TTL: 120}
+}
+
+func inventoryValue(c *Catalog, inv Inventory) int {
+	total := 0
+	for item, count := range inv.Items {
+		if loot, ok := c.LootByID[item]; ok {
+			total += loot.BaseValue * count
+		}
+	}
+	return total
+}
+
+func creditReward(ps *PlayerState) int {
+	return ps.Stats.Kills*20 + ps.Stats.ObjectivesCompleted*125 + ps.Stats.ResourcesMined*15 + ps.Stats.LootExtractedValue/4
 }
 
 func (r *RunState) closestPlayer(pos Vec2) *Entity {

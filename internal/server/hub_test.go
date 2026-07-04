@@ -92,11 +92,15 @@ func TestSettleRunPersistsExtractedLootOnly(t *testing.T) {
 	ps := run.Players["p1"]
 	ps.Carried.Add("alien_alloy", 2)
 	ps.Extracted = true
+	ps.Stats.CreditsEarned = 77
 	run.Phase = game.PhaseComplete
 
 	hub.settleRun(ctx, run)
 	if session.account.Inventory.Items["alien_alloy"] != 2 {
 		t.Fatalf("expected extracted loot persisted, got %+v", session.account.Inventory.Items)
+	}
+	if session.account.Credits != account.Credits+77 {
+		t.Fatalf("expected earned credits persisted, got %d", session.account.Credits)
 	}
 
 	failed := game.NewRun("failed", catalog, "verdant", 2)

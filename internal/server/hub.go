@@ -463,6 +463,7 @@ func (h *Hub) settleRun(ctx context.Context, r *game.RunState) {
 			for item, count := range ps.Carried.Items {
 				account.Inventory.Add(item, count)
 			}
+			account.Credits += ps.Stats.CreditsEarned
 		}
 		account.CurrentRun = ""
 		if err := h.store.SaveAccount(ctx, account); err != nil {
