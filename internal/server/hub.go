@@ -163,6 +163,9 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 		if planetID == "" {
 			planetID = "verdant"
 		}
+		if _, ok := h.catalog.PlanetByID[planetID]; !ok {
+			return fmt.Errorf("unknown planet %s", planetID)
+		}
 		runID, group := h.match.Enqueue(game.QueueTicket{PlayerID: s.id, Name: s.name, PlanetID: planetID, Loadout: loadout, QueuedAt: time.Now()})
 		if runID == "" {
 			return nil

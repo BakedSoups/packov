@@ -21,6 +21,7 @@ const (
 	screenTitle screenState = iota
 	screenCharacter
 	screenStation
+	screenPlanet
 	screenLoadout
 	screenInventory
 	screenCrafting
@@ -35,6 +36,7 @@ type menuState struct {
 	EditIndex    int
 	SettingsIdx  int
 	LoadoutIdx   int
+	PlanetIdx    int
 	CraftIdx     int
 	MarketIdx    int
 	CraftConfirm bool
@@ -42,7 +44,7 @@ type menuState struct {
 
 var (
 	titleItems    = []string{"Enter Station", "Edit Character", "Settings", "Local Test Run"}
-	stationItems  = []string{"Deploy Verdant-9", "Loadout", "Inventory", "Crafting", "Marketplace", "Character", "Settings", "Title"}
+	stationItems  = []string{"Deploy", "Loadout", "Inventory", "Crafting", "Marketplace", "Character", "Settings", "Title"}
 	characterRows = []string{"Primary", "Secondary", "Trail", "Nose", "Drone Skin", "Badge"}
 	settingsRows  = []string{"Mouse Aim", "Controller", "Damage Numbers", "Screen Shake", "Back"}
 	colorOptions  = []string{"cyan", "white", "amber", "green", "violet", "red"}
@@ -70,8 +72,8 @@ func (a *App) updateMenu() {
 	case screenStation:
 		a.updateList(len(stationItems), func() {
 			switch stationItems[a.menu.Index] {
-			case "Deploy Verdant-9":
-				a.deploy()
+			case "Deploy":
+				a.screen = screenPlanet
 			case "Loadout":
 				a.screen = screenLoadout
 			case "Inventory":
@@ -89,6 +91,8 @@ func (a *App) updateMenu() {
 				a.screen = screenTitle
 			}
 		})
+	case screenPlanet:
+		a.updatePlanetSelect()
 	case screenCharacter:
 		a.updateCharacterEditor()
 	case screenLoadout:
@@ -353,13 +357,24 @@ func cycleString(options []string, current string, delta int) string {
 }
 
 func (a *App) deploy() {
+	planetID := a.selectedPlanetID()
 	if a.net != nil && a.net.isOpen() {
 		a.queued = true
-		a.status = "queueing"
-		a.net.send(protocol.ClientMessage{Type: "queue", PlanetID: "verdant", Loadout: a.loadout})
+		a.status = "queueing " + planetID
+		a.net.send(protocol.ClientMessage{Type: "queue", PlanetID: planetID, Loadout: a.loadout})
 		return
 	}
-	a.startLocalRun()
+	a.startLocalRun(planetID)
+}
+
+func (a *App) selectedPlanetID() string {
+	if len(a.catalog.Planets) == 0 {
+		return "verdant"
+	}
+	if a.menu.PlanetIdx < 0 || a.menu.PlanetIdx >= len(a.catalog.Planets) {
+		a.menu.PlanetIdx = 0
+	}
+	return a.catalog.Planets[a.menu.PlanetIdx].ID
 }
 
 func (a *App) syncAppearance() {
@@ -371,15 +386,38 @@ func (a *App) syncAppearance() {
 	}
 }
 
-func (a *App) startLocalRun() {
+func (a *App) startLocalRun(planetID ...string) {
+	id := a.selectedPlanetID()
+	if len(planetID) > 0 && planetID[0] != "" {
+		id = planetID[0]
+	}
 	a.remote = false
 	a.queued = false
 	a.localSettled = false
-	a.run = game.NewRun("local-solo", a.catalog, "verdant", timeSeed())
+	a.run = game.NewRun("local-solo", a.catalog, id, timeSeed())
 	a.run.AddPlayer(a.player, a.look.Callsign, a.loadout)
 	a.run.SpawnInitial(a.catalog)
 	a.screen = screenRun
 	a.status = "local fallback"
+}
+
+func (a *App) updatePlanetSelect() {
+	if a.justPressed(ebiten.KeyEscape) {
+		a.screen = screenStation
+		return
+	}
+	if len(a.catalog.Planets) == 0 {
+		return
+	}
+	if a.justPressed(ebiten.KeyArrowUp) || a.justPressed(ebiten.KeyW) {
+		a.menu.PlanetIdx = (a.menu.PlanetIdx + len(a.catalog.Planets) - 1) % len(a.catalog.Planets)
+	}
+	if a.justPressed(ebiten.KeyArrowDown) || a.justPressed(ebiten.KeyS) {
+		a.menu.PlanetIdx = (a.menu.PlanetIdx + 1) % len(a.catalog.Planets)
+	}
+	if a.justPressed(ebiten.KeyEnter) || a.justPressed(ebiten.KeySpace) {
+		a.deploy()
+	}
 }
 
 func (a *App) drawMenu(screen *ebiten.Image) {
@@ -389,6 +427,8 @@ func (a *App) drawMenu(screen *ebiten.Image) {
 		a.drawTitle(screen)
 	case screenStation:
 		a.drawStation(screen)
+	case screenPlanet:
+		a.drawPlanetSelect(screen)
 	case screenCharacter:
 		a.drawCharacter(screen)
 	case screenLoadout:
@@ -432,14 +472,60 @@ func (a *App) drawTitle(screen *ebiten.Image) {
 func (a *App) drawStation(screen *ebiten.Image) {
 	drawLargeText(screen, "STATION", 70, 108)
 	drawMenuList(screen, stationItems, a.menu.Index, 76, 220)
+	planet := a.selectedPlanet()
 	lines := []string{
 		fmt.Sprintf("Loadout: %s / %s / %s", a.weaponName(a.loadout.WeaponID), a.abilityName(a.loadout.AbilityID), a.loadout.HullID),
 		fmt.Sprintf("Credits: %d", accountCredits(a.account)),
-		"Daily: Extract once, recover resources, damage a boss",
-		"Planet: Verdant-9 / Forest / Threat 1",
+		"Daily: Extract once, mine 3 resources, damage a boss",
+		"Weekly: Complete objectives on 3 planet types",
+		fmt.Sprintf("Selected: %s / %s / Threat %d", planet.Name, planet.Type, planet.Threat),
 	}
 	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 520, 230)
 	a.drawShipPreview(screen, game.V(940, 430), 1.0)
+}
+
+func (a *App) drawPlanetSelect(screen *ebiten.Image) {
+	drawLargeText(screen, "PLANETS", 72, 108)
+	rows := make([]string, 0, len(a.catalog.Planets))
+	for _, planet := range a.catalog.Planets {
+		rows = append(rows, fmt.Sprintf("%-16s Threat %d", planet.Name, planet.Threat))
+	}
+	if len(rows) == 0 {
+		rows = append(rows, "No planets loaded")
+	}
+	drawMenuList(screen, rows, a.menu.PlanetIdx, 76, 210)
+	planet := a.selectedPlanet()
+	boss := a.catalog.BossByID[planet.Boss]
+	lines := []string{
+		fmt.Sprintf("Biome: %s", planet.Type),
+		fmt.Sprintf("Threat: %d", planet.Threat),
+		"Resources: " + strings.Join(planet.Resources, ", "),
+		"Boss: " + valueOr(boss.Name, planet.Boss),
+		"Hazards: " + strings.Join(planet.Hazards, ", "),
+		"Event: rotating world event modifiers apply when active",
+		"",
+		"Daily missions",
+		"- Extract from any planet",
+		"- Mine resources before extraction",
+		"- Damage a boss or elite",
+		"",
+		"Weekly",
+		"- Clear objectives across multiple biomes",
+	}
+	vector.DrawFilledRect(screen, 520, 190, 610, 330, color.RGBA{18, 28, 38, 225}, false)
+	vector.StrokeRect(screen, 520, 190, 610, 330, 4, outlineColor(), false)
+	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 548, 218)
+	ebitenutil.DebugPrintAt(screen, "Enter deploys    Esc returns", 82, 560)
+}
+
+func (a *App) selectedPlanet() game.PlanetDef {
+	if len(a.catalog.Planets) == 0 {
+		return game.PlanetDef{ID: "verdant", Name: "Verdant-9", Type: "forest", Threat: 1, Boss: "hive_queen"}
+	}
+	if a.menu.PlanetIdx < 0 || a.menu.PlanetIdx >= len(a.catalog.Planets) {
+		a.menu.PlanetIdx = 0
+	}
+	return a.catalog.Planets[a.menu.PlanetIdx]
 }
 
 func (a *App) drawLoadout(screen *ebiten.Image) {

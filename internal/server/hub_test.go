@@ -4,9 +4,11 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"packov/internal/game"
+	"packov/internal/protocol"
 )
 
 func TestValidateLoadoutRequiresUnlocks(t *testing.T) {
@@ -29,6 +31,19 @@ func TestAcceptInputRejectsStaleSequence(t *testing.T) {
 	}
 	if err := s.acceptInput(game.InputCommand{Seq: 9}); err == nil {
 		t.Fatal("older sequence should be rejected")
+	}
+}
+
+func TestQueueRejectsUnknownPlanet(t *testing.T) {
+	ctx := context.Background()
+	catalog := game.DefaultCatalogForClient()
+	store := NewMemoryStore()
+	hub := NewHub(catalog, store, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	account := game.NewAccount("p1", "Pilot")
+	s := &Session{id: "p1", name: "Pilot", account: account}
+	err := hub.handle(ctx, s, protocol.ClientMessage{Type: "queue", PlanetID: "missing", Loadout: game.DefaultLoadout()})
+	if err == nil || !strings.Contains(err.Error(), "unknown planet") {
+		t.Fatalf("expected unknown planet error, got %v", err)
 	}
 }
 
