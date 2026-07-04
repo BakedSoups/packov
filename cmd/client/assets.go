@@ -88,16 +88,32 @@ func DrawBossModule(screen *ebiten.Image, center game.Vec2, radius float64, phas
 
 func DrawProjectile(screen *ebiten.Image, center game.Vec2, radius float64, weaponID string, rotation float64) {
 	switch weaponID {
+	case "machine_gun":
+		drawOutlinedCircle(screen, center, radius+1, color.RGBA{255, 221, 76, 255}, 3)
+	case "shotgun":
+		drawOutlinedCircle(screen, center, radius, color.RGBA{255, 236, 141, 245}, 2.5)
 	case "railgun":
 		dir := game.FromAngle(rotation)
 		a := center.Sub(dir.Mul(radius * 2.2))
 		b := center.Add(dir.Mul(radius * 3.6))
-		vector.StrokeLine(screen, float32(a.X), float32(a.Y), float32(b.X), float32(b.Y), 9, outlineColor(), false)
-		vector.StrokeLine(screen, float32(a.X), float32(a.Y), float32(b.X), float32(b.Y), 4, color.RGBA{238, 247, 255, 255}, false)
+		vector.StrokeLine(screen, float32(a.X), float32(a.Y), float32(b.X), float32(b.Y), 11, outlineColor(), false)
+		vector.StrokeLine(screen, float32(a.X), float32(a.Y), float32(b.X), float32(b.Y), 5, color.RGBA{238, 247, 255, 255}, false)
+	case "laser":
+		dir := game.FromAngle(rotation)
+		a := center.Sub(dir.Mul(radius * 1.2))
+		b := center.Add(dir.Mul(radius * 5.5))
+		vector.StrokeLine(screen, float32(a.X), float32(a.Y), float32(b.X), float32(b.Y), 8, outlineColor(), false)
+		vector.StrokeLine(screen, float32(a.X), float32(a.Y), float32(b.X), float32(b.Y), 4, color.RGBA{255, 72, 158, 255}, false)
+	case "flamethrower":
+		drawOutlinedCircle(screen, center, radius+6, color.RGBA{255, 112, 48, 200}, 3)
+		vector.StrokeCircle(screen, float32(center.X), float32(center.Y), float32(radius+12), 2, color.RGBA{255, 181, 57, 110}, false)
 	case "rocket_launcher":
-		drawPolygonWithOutline(screen, center, radius+4, 3, rotation, color.RGBA{255, 146, 62, 255}, primitiveStyle.OutlineStroke-2)
+		back := center.Sub(game.FromAngle(rotation).Mul(radius + 8))
+		drawOutlinedCircle(screen, back, radius*0.8, color.RGBA{255, 112, 48, 160}, 2)
+		drawPolygonWithOutline(screen, center, radius+5, 3, rotation, color.RGBA{255, 146, 62, 255}, primitiveStyle.OutlineStroke-2)
 	case "plasma_cannon":
 		drawOutlinedCircle(screen, center, radius+5, color.RGBA{140, 104, 255, 255}, primitiveStyle.OutlineStroke-2)
+		vector.StrokeCircle(screen, float32(center.X), float32(center.Y), float32(radius+12), 3, color.RGBA{184, 92, 255, 130}, false)
 	default:
 		drawOutlinedCircle(screen, center, radius+1, primitiveStyle.Bullet, 3)
 	}

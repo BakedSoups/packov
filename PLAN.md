@@ -65,7 +65,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 3: Diep.io-Style Asset Pass
 
-- Status: shared primitive style tokens and named asset draw APIs exist for player ships, enemies, bosses, projectiles, loot nodes, and ability/drone effects; live entity rendering now routes through those APIs. Weapon-specific projectile primitives are started for railgun, rocket, and plasma, with the remaining weapon/effect pass still pending.
+- Status: shared primitive style tokens and named asset draw APIs exist for player ships, enemies, bosses, projectiles, loot nodes, and ability/drone effects; live entity rendering now routes through those APIs. Weapon-specific projectile primitives now cover machine gun, shotgun, railgun, laser, flamethrower, rocket launcher, and plasma cannon. Hit/muzzle particle polish remains.
 - Turn current primitive helpers into a small asset API:
   - `DrawPlayerShip`
   - `DrawEnemyShape`
