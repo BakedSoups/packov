@@ -17,6 +17,9 @@ ci:
 	go test ./internal/game ./internal/protocol ./internal/server ./cmd/server
 	go run ./cmd/contentcheck content/game.json
 	GOOS=js GOARCH=wasm go build -o /tmp/packov-game.wasm ./cmd/client
+	GOOS=js GOARCH=wasm go build -o web/game.wasm ./cmd/client
+	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" web/wasm_exec.js
+	go run ./cmd/websmoke web
 
 docker-check:
 	docker compose config --quiet
