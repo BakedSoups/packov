@@ -87,6 +87,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 4: Menu and Station Backdrop
 
+- Status: a Go/Ebitengine station backdrop prototype is implemented with layered orbit rings, docking arms, a central geometric base, and depth-scaled living orbs. Three.js remains deferred until the Go-only version proves insufficient.
 - Keep all gameplay and UI in Go/Ebitengine unless there is a strong reason not to.
 - Evaluate a Three.js-only decorative station backdrop for the menu:
   - living orbs spinning around a base

@@ -407,12 +407,13 @@ func (a *App) drawMenu(screen *ebiten.Image) {
 }
 
 func (a *App) drawMenuBackground(screen *ebiten.Image) {
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 12; i++ {
 		x := float32((i*97 + int(a.seq)%97) % screenW)
 		y := float32((i*53 + int(a.seq/2)%53) % screenH)
 		sides := 3 + i%5
-		drawPolygon(screen, game.V(float64(x), float64(y)), float64(10+i%18), sides, float64(a.seq)/80+float64(i), color.RGBA{28, 42, 58, 135})
+		drawPolygon(screen, game.V(float64(x), float64(y)), float64(10+i%18), sides, float64(a.seq)/80+float64(i), color.RGBA{28, 42, 58, 82})
 	}
+	DrawStationBackdrop(screen, game.V(905, 350), a.seq)
 	vector.DrawFilledRect(screen, 0, 0, screenW, 84, color.RGBA{10, 16, 24, 245}, false)
 	vector.DrawFilledRect(screen, 0, screenH-72, screenW, 72, color.RGBA{10, 16, 24, 235}, false)
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("PACKOV    Net %s", a.status), 24, 24)
