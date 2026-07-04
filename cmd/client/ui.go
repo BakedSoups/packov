@@ -548,7 +548,7 @@ func (a *App) drawShipPreview(screen *ebiten.Image, center game.Vec2, scale floa
 	rot := float64(a.seq)/45 + a.look.SpinOffset
 	primary := appearanceColor(a.look.Primary)
 	secondary := appearanceColor(a.look.Secondary)
-	vector.DrawFilledCircle(screen, float32(center.X), float32(center.Y), float32(32*scale), primary, false)
+	drawOutlinedCircle(screen, center, 32*scale, primary, float32(5*scale))
 	noseLen := 54.0 * scale
 	if a.look.NoseID == "needle" {
 		noseLen = 68 * scale
@@ -565,7 +565,7 @@ func (a *App) drawShipPreview(screen *ebiten.Image, center game.Vec2, scale floa
 	fillTriangle(screen, nose, secondary)
 	for i := 0; i < 3; i++ {
 		t := center.Sub(game.FromAngle(rot).Mul(float64(48+i*18) * scale))
-		vector.DrawFilledCircle(screen, float32(t.X), float32(t.Y), float32((12-float64(i)*2)*scale), trailColor(a.look.TrailID, uint8(120-i*28)), false)
+		drawOutlinedCircle(screen, t, (12-float64(i)*2)*scale, trailColor(a.look.TrailID, uint8(145-i*30)), float32(2*scale))
 	}
 	for i := 0; i < 2; i++ {
 		ang := rot + math.Pi + (float64(i)*2-1)*0.85

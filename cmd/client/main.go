@@ -257,7 +257,7 @@ func (a *App) applySnapshot(s game.Snapshot) {
 }
 
 func (a *App) Draw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{8, 12, 18, 255})
+	screen.Fill(color.RGBA{236, 242, 248, 255})
 	if a.screen != screenRun {
 		a.drawMenu(screen)
 		return
@@ -266,7 +266,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 	a.drawMap(screen)
 	for _, t := range a.trails {
 		p := worldToScreen(a.camera, t.Pos)
-		vector.DrawFilledCircle(screen, float32(p.X), float32(p.Y), float32(8*t.TTL), color.RGBA{58, 202, 255, uint8(90 * t.TTL / 0.35)}, false)
+		drawOutlinedCircle(screen, p, 9*t.TTL, color.RGBA{58, 202, 255, uint8(135 * t.TTL / 0.35)}, 2)
 	}
 	for _, e := range a.run.Entities {
 		entity := a.renderEntity(e)
@@ -306,18 +306,19 @@ func (a *App) drawGrid(screen *ebiten.Image) {
 	offsetX := math.Mod(-a.camera.X+screenW/2, grid)
 	offsetY := math.Mod(-a.camera.Y+screenH/2, grid)
 	for x := offsetX; x < screenW; x += grid {
-		vector.StrokeLine(screen, float32(x), 0, float32(x), screenH, 1, color.RGBA{24, 32, 42, 255}, false)
+		vector.StrokeLine(screen, float32(x), 0, float32(x), screenH, 2, color.RGBA{204, 215, 226, 255}, false)
 	}
 	for y := offsetY; y < screenH; y += grid {
-		vector.StrokeLine(screen, 0, float32(y), screenW, float32(y), 1, color.RGBA{24, 32, 42, 255}, false)
+		vector.StrokeLine(screen, 0, float32(y), screenW, float32(y), 2, color.RGBA{204, 215, 226, 255}, false)
 	}
 }
 
 func (a *App) drawMap(screen *ebiten.Image) {
 	for _, h := range a.run.Map.Hazards {
 		p := worldToScreen(a.camera, h.Position)
-		vector.DrawFilledCircle(screen, float32(p.X), float32(p.Y), float32(h.Radius), color.RGBA{118, 61, 145, 45}, false)
-		vector.StrokeCircle(screen, float32(p.X), float32(p.Y), float32(h.Radius), 2, color.RGBA{176, 82, 214, 150}, false)
+		vector.DrawFilledCircle(screen, float32(p.X), float32(p.Y), float32(h.Radius), color.RGBA{178, 104, 255, 38}, false)
+		vector.StrokeCircle(screen, float32(p.X), float32(p.Y), float32(h.Radius), 5, color.RGBA{46, 58, 74, 180}, false)
+		vector.StrokeCircle(screen, float32(p.X), float32(p.Y), float32(h.Radius-7), 3, color.RGBA{178, 104, 255, 170}, false)
 	}
 	for _, o := range a.run.Map.Objectives {
 		p := worldToScreen(a.camera, o.Position)
@@ -325,18 +326,19 @@ func (a *App) drawMap(screen *ebiten.Image) {
 	}
 	for _, r := range a.run.Map.Resources {
 		p := worldToScreen(a.camera, r.Position)
-		vector.DrawFilledCircle(screen, float32(p.X), float32(p.Y), 7, color.RGBA{62, 214, 139, 215}, false)
+		drawOutlinedCircle(screen, p, 8, color.RGBA{62, 214, 139, 235}, 3)
 	}
 	ep := worldToScreen(a.camera, a.run.Map.Extraction)
-	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 130, 4, color.RGBA{80, 212, 255, 180}, false)
-	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 95, 2, color.RGBA{80, 212, 255, 110}, false)
+	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 130, 7, color.RGBA{46, 58, 74, 210}, false)
+	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 121, 4, color.RGBA{47, 178, 255, 210}, false)
+	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 90, 4, color.RGBA{47, 178, 255, 145}, false)
 }
 
 func (a *App) drawEntity(screen *ebiten.Image, e *game.Entity) {
 	p := worldToScreen(a.camera, e.Position)
 	switch e.Kind {
 	case game.EntityPlayer:
-		vector.DrawFilledCircle(screen, float32(p.X), float32(p.Y), float32(e.Radius), color.RGBA{47, 178, 255, 255}, false)
+		drawOutlinedCircle(screen, p, e.Radius, color.RGBA{47, 178, 255, 255}, 5)
 		nose := []game.Vec2{
 			p.Add(game.FromAngle(e.Rotation).Mul(28)),
 			p.Add(game.FromAngle(e.Rotation + 2.55).Mul(15)),
@@ -344,7 +346,8 @@ func (a *App) drawEntity(screen *ebiten.Image, e *game.Entity) {
 		}
 		fillTriangle(screen, nose, color.RGBA{232, 248, 255, 255})
 		if e.Shield > 0 {
-			vector.StrokeCircle(screen, float32(p.X), float32(p.Y), float32(e.Radius+8), 3, color.RGBA{80, 212, 255, 170}, false)
+			vector.StrokeCircle(screen, float32(p.X), float32(p.Y), float32(e.Radius+9), 5, color.RGBA{46, 58, 74, 185}, false)
+			vector.StrokeCircle(screen, float32(p.X), float32(p.Y), float32(e.Radius+14), 3, color.RGBA{47, 178, 255, 185}, false)
 		}
 	case game.EntityEnemy:
 		def := a.catalog.EnemyByID[e.DefID]
@@ -364,7 +367,7 @@ func (a *App) drawEntity(screen *ebiten.Image, e *game.Entity) {
 		}
 		drawHealth(screen, p.Add(game.V(0, -e.Radius-24)), e)
 	case game.EntityBullet:
-		vector.DrawFilledCircle(screen, float32(p.X), float32(p.Y), float32(e.Radius), color.RGBA{255, 235, 120, 255}, false)
+		drawOutlinedCircle(screen, p, e.Radius+1, color.RGBA{255, 221, 76, 255}, 2.5)
 	case game.EntityLoot:
 		drawPolygon(screen, p, 10, 6, float64(a.run.Tick)/18, rarityColor(a.catalog.LootByID[e.DefID].Rarity))
 	case game.EntityDrone, game.EntityTurret:
@@ -394,14 +397,21 @@ func drawHealth(screen *ebiten.Image, p game.Vec2, e *game.Entity) {
 	w := float32(e.Radius * 2)
 	x := float32(p.X) - w/2
 	y := float32(p.Y) - float32(e.Radius) - 12
-	vector.DrawFilledRect(screen, x, y, w, 4, color.RGBA{45, 18, 24, 220}, false)
-	vector.DrawFilledRect(screen, x, y, w*float32(math.Max(0, e.HP/e.MaxHP)), 4, color.RGBA{90, 235, 136, 230}, false)
+	vector.DrawFilledRect(screen, x-2, y-2, w+4, 8, color.RGBA{46, 58, 74, 235}, false)
+	vector.DrawFilledRect(screen, x, y, w, 4, color.RGBA{255, 255, 255, 240}, false)
+	vector.DrawFilledRect(screen, x, y, w*float32(math.Max(0, e.HP/e.MaxHP)), 4, color.RGBA{80, 205, 104, 255}, false)
 }
 
 func drawPolygon(screen *ebiten.Image, center game.Vec2, radius float64, sides int, rotation float64, clr color.Color) {
+	drawPolygonWithOutline(screen, center, radius, sides, rotation, clr, 5)
+}
+
+func drawPolygonWithOutline(screen *ebiten.Image, center game.Vec2, radius float64, sides int, rotation float64, clr color.Color, stroke float32) {
 	var path vector.Path
+	points := make([]game.Vec2, 0, sides)
 	for i := 0; i < sides; i++ {
 		p := center.Add(game.FromAngle(rotation + float64(i)*math.Pi*2/float64(sides)).Mul(radius))
+		points = append(points, p)
 		if i == 0 {
 			path.MoveTo(float32(p.X), float32(p.Y))
 		} else {
@@ -409,6 +419,20 @@ func drawPolygon(screen *ebiten.Image, center game.Vec2, radius float64, sides i
 		}
 	}
 	path.Close()
+	fillPath(screen, path, clr)
+	for i := 0; i < len(points); i++ {
+		a := points[i]
+		b := points[(i+1)%len(points)]
+		vector.StrokeLine(screen, float32(a.X), float32(a.Y), float32(b.X), float32(b.Y), stroke, outlineColor(), false)
+	}
+}
+
+func drawOutlinedCircle(screen *ebiten.Image, center game.Vec2, radius float64, clr color.Color, stroke float32) {
+	vector.DrawFilledCircle(screen, float32(center.X), float32(center.Y), float32(radius)+stroke, outlineColor(), false)
+	vector.DrawFilledCircle(screen, float32(center.X), float32(center.Y), float32(radius), clr, false)
+}
+
+func fillPath(screen *ebiten.Image, path vector.Path, clr color.Color) {
 	var vs []ebiten.Vertex
 	var is []uint16
 	vs, is = path.AppendVerticesAndIndicesForFilling(vs, is)
@@ -423,6 +447,11 @@ func drawPolygon(screen *ebiten.Image, center game.Vec2, radius float64, sides i
 }
 
 func fillTriangle(screen *ebiten.Image, pts []game.Vec2, clr color.Color) {
+	for i := 0; i < len(pts); i++ {
+		a := pts[i]
+		b := pts[(i+1)%len(pts)]
+		vector.StrokeLine(screen, float32(a.X), float32(a.Y), float32(b.X), float32(b.Y), 9, outlineColor(), false)
+	}
 	var path vector.Path
 	path.MoveTo(float32(pts[0].X), float32(pts[0].Y))
 	path.LineTo(float32(pts[1].X), float32(pts[1].Y))
@@ -439,6 +468,15 @@ func fillTriangle(screen *ebiten.Image, pts []game.Vec2, clr color.Color) {
 		vs[i].ColorA = float32(a) / 0xffff
 	}
 	screen.DrawTriangles(vs, is, whiteImage(), nil)
+	for i := 0; i < len(pts); i++ {
+		a := pts[i]
+		b := pts[(i+1)%len(pts)]
+		vector.StrokeLine(screen, float32(a.X), float32(a.Y), float32(b.X), float32(b.Y), 4, outlineColor(), false)
+	}
+}
+
+func outlineColor() color.Color {
+	return color.RGBA{46, 58, 74, 255}
 }
 
 var solid *ebiten.Image

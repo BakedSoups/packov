@@ -73,6 +73,19 @@ This roadmap tracks the path from the current foundation to a production-grade b
 - [x] Add settings for graphics, controls, accessibility toggles, and controller enablement.
 - [x] Keep all interactive UI implemented in Go/Ebitengine, not DOM overlays, so desktop, WASM, and Ebitdock paths share one UI codebase.
 
+## Milestone 4A: Visual Identity and Primitive Assets
+
+- [x] Push the in-run renderer toward Diep.io readability: bright field, simple grid, saturated fills, and thick dark outlines.
+- [x] Draw current ships, enemies, bosses, loot, bullets, objectives, and drones from reusable primitive asset helpers.
+- [ ] Build a data-driven primitive asset catalog for hull silhouettes, enemy shapes, boss modules, projectiles, loot nodes, and UI icons.
+- [ ] Add consistent outline width, hit flash, hover/selection outlines, and rarity outlines as style tokens.
+- [ ] Add weapon-specific projectile primitives: pellets, rail slugs, plasma orbs, rockets, flame particles, laser beams.
+- [ ] Add ability primitives: dash streak, shield ring, drone/turret chassis, EMP ring, heal pulse.
+- [ ] Add biome primitive sets: trees, rocks, crystals, vents, wreck panels, hive pods, facility doors.
+- [ ] Add boss-specific primitive modules and telegraphs.
+- [ ] Add an asset preview/debug screen in Go/Ebitengine.
+- [ ] Keep all art procedural/geometric; no pixel art, hand-drawn sprites, or realistic assets.
+
 ## Milestone 5: Character Customization
 
 - [x] Add character/ship editor as a first-class Go/Ebitengine screen.
