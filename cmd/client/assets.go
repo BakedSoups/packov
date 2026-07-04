@@ -126,21 +126,3 @@ func DrawLootNode(screen *ebiten.Image, center game.Vec2, rarity game.Rarity, ti
 func DrawAbilityEffect(screen *ebiten.Image, center game.Vec2, radius float64, tick uint64) {
 	drawPolygonWithOutline(screen, center, radius, 4, float64(tick)/12, primitiveStyle.Drone, primitiveStyle.OutlineStroke-1)
 }
-
-func DrawStationBackdrop(screen *ebiten.Image, center game.Vec2, tick uint64) {
-	t := float64(tick) / 60
-	for ring := 0; ring < 4; ring++ {
-		radius := 72 + float64(ring)*42
-		count := 9 + ring*4
-		spin := t*(0.35+float64(ring)*0.13) + float64(ring)*0.8
-		vector.StrokeCircle(screen, float32(center.X), float32(center.Y), float32(radius), 2, color.RGBA{55, 78, 98, 72}, false)
-		for i := 0; i < count; i++ {
-			ang := spin + float64(i)*math.Pi*2/float64(count)
-			breathe := 1 + math.Sin(t*2+float64(i))*0.18
-			p := center.Add(game.FromAngle(ang).Mul(radius))
-			alpha := uint8(105 + ring*26)
-			drawOutlinedCircle(screen, p, (4+float64(ring))*breathe, color.RGBA{103, 228, 155, alpha}, 2)
-		}
-	}
-	drawOutlinedCircle(screen, center, 10+math.Sin(t*3)*2, color.RGBA{247, 205, 92, 210}, 3)
-}

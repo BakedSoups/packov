@@ -23,7 +23,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Immediate Observations
 
-- Status update: first-shot firing now works immediately, `J` is also bound to fire for keyboard testing, failed/downed state draws a clear overlay, and the menu background is simplified to centered spinning particle rings instead of the heavier station structure.
+- Status update: first-shot firing now works immediately, `J` is also bound to fire for keyboard testing, failed/downed state draws a clear overlay, and the menu background is now static with the previous spinning dot/atom-style backdrop removed.
 - Base world enemies reach the player, stop, stare, and jitter around contact range.
 - Enemy contact behavior needs to feel intentional: circling, backing off, lunging, and re-approaching instead of vibrating at the collision boundary.
 - The rotating geometric objects in the menu background are a good direction, but the station/menu should feel more alive.
