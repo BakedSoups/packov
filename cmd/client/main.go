@@ -325,16 +325,36 @@ func (a *App) drawMap(screen *ebiten.Image) {
 	}
 	for _, o := range a.run.Map.Objectives {
 		p := worldToScreen(a.camera, o.Position)
-		drawPolygonWithOutline(screen, p, 16, 4, 0.7, primitiveStyle.Objective, primitiveStyle.OutlineStroke)
+		drawObjectiveMarker(screen, p, o, primitiveStyle.Objective)
 	}
 	for _, r := range a.run.Map.Resources {
 		p := worldToScreen(a.camera, r.Position)
-		drawOutlinedCircle(screen, p, 8, primitiveStyle.Resource, 3)
+		drawObjectiveMarker(screen, p, r, primitiveStyle.Resource)
 	}
 	ep := worldToScreen(a.camera, a.run.Map.Extraction)
 	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 130, 7, color.RGBA{46, 58, 74, 210}, false)
 	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 121, 4, color.RGBA{47, 178, 255, 210}, false)
 	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 90, 4, color.RGBA{47, 178, 255, 145}, false)
+}
+
+func drawObjectiveMarker(screen *ebiten.Image, p game.Vec2, objective game.Objective, fill color.RGBA) {
+	alpha := fill.A
+	if objective.Done {
+		fill = color.RGBA{103, 228, 155, 210}
+		alpha = 150
+	}
+	drawPolygonWithOutline(screen, p, 16, 4, 0.7, fill, primitiveStyle.OutlineStroke)
+	if objective.Progress > 0 && !objective.Done {
+		w := float32(44)
+		x := float32(p.X) - w/2
+		y := float32(p.Y) + 26
+		vector.DrawFilledRect(screen, x-2, y-2, w+4, 8, outlineColor(), false)
+		vector.DrawFilledRect(screen, x, y, w, 4, color.RGBA{255, 255, 255, alpha}, false)
+		vector.DrawFilledRect(screen, x, y, w*float32(math.Min(1, objective.Progress)), 4, color.RGBA{247, 205, 92, 255}, false)
+	}
+	if objective.Done {
+		vector.StrokeCircle(screen, float32(p.X), float32(p.Y), 24, 3, color.RGBA{103, 228, 155, 190}, false)
+	}
 }
 
 func (a *App) drawEntity(screen *ebiten.Image, e *game.Entity) {
@@ -366,7 +386,7 @@ func (a *App) drawHUD(screen *ebiten.Image) {
 	ps := a.run.Players[a.player]
 	lines := []string{
 		"PACKOV  " + strings.ToUpper(string(a.run.Phase)) + "  " + a.run.Planet.Name,
-		"WASD move  Mouse aim/fire  Space ability  E extract",
+		"WASD move  Mouse aim/fire  Space ability  E interact/extract",
 		fmt.Sprintf("Tick %d  Entities %d  Runtime %s  Net %s", a.run.Tick, len(a.run.Entities), time.Since(a.started).Truncate(time.Second), a.status),
 	}
 	if len(a.run.Messages) > 0 {

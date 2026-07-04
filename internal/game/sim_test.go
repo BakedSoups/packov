@@ -114,6 +114,48 @@ func TestExtractedRunCompletesWithCarriedLootIntactForSettlement(t *testing.T) {
 	}
 }
 
+func TestObjectiveInteractionCompletesObjective(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("objective", c, "verdant", 42)
+	r.AddPlayer("p1", "pilot", DefaultLoadout())
+	ps := r.Players["p1"]
+	player := r.Entities[ps.EntityID]
+	player.Position = r.Map.Objectives[0].Position
+	for i := 0; i < TickRate*4; i++ {
+		r.ApplyInput(InputCommand{PlayerID: "p1", Aim: player.Position.Add(V(1, 0)), Extract: true})
+		r.Step(c)
+	}
+	if !r.Map.Objectives[0].Done {
+		t.Fatalf("expected objective complete, progress %.2f", r.Map.Objectives[0].Progress)
+	}
+}
+
+func TestMiningResourceAddsCarriedLoot(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("mine", c, "verdant", 42)
+	r.AddPlayer("p1", "pilot", DefaultLoadout())
+	ps := r.Players["p1"]
+	player := r.Entities[ps.EntityID]
+	resource := r.Map.Resources[0]
+	player.Position = resource.Position
+	for i := 0; i < TickRate*2; i++ {
+		r.ApplyInput(InputCommand{PlayerID: "p1", Aim: player.Position.Add(V(1, 0)), Extract: true})
+		r.Step(c)
+	}
+	if !r.Map.Resources[0].Done {
+		t.Fatalf("expected resource mined, progress %.2f", r.Map.Resources[0].Progress)
+	}
+	if ps.Carried.Items[resource.Kind] != 1 {
+		t.Fatalf("expected carried %s, got %+v", resource.Kind, ps.Carried.Items)
+	}
+}
+
 func TestEnemySeparationResolvesOverlap(t *testing.T) {
 	c, err := LoadCatalog("../../content/game.json")
 	if err != nil {

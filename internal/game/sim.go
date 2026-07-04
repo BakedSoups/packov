@@ -199,6 +199,9 @@ func (r *RunState) updatePlayers(c *Catalog, dt float64) {
 		if cmd.Ability {
 			r.useAbility(c, ps, e)
 		}
+		if cmd.Extract {
+			r.updateObjectiveInteraction(ps, e, dt)
+		}
 		if cmd.Extract && Dist(e.Position, r.Map.Extraction) < 130 {
 			if !ps.Extracting {
 				ps.Extracting = true
@@ -209,6 +212,43 @@ func (r *RunState) updatePlayers(c *Catalog, dt float64) {
 		}
 		e.Shield = math.Max(0, e.Shield-dt*8)
 	}
+}
+
+func (r *RunState) updateObjectiveInteraction(ps *PlayerState, e *Entity, dt float64) {
+	if idx, ok := nearestObjective(r.Map.Objectives, e.Position, 82); ok {
+		obj := &r.Map.Objectives[idx]
+		obj.Progress = math.Min(1, obj.Progress+dt/3.0)
+		if obj.Progress >= 1 && !obj.Done {
+			obj.Done = true
+			r.Messages = append(r.Messages, ps.Name+" completed "+obj.Kind+".")
+		}
+		return
+	}
+	if idx, ok := nearestObjective(r.Map.Resources, e.Position, 70); ok {
+		node := &r.Map.Resources[idx]
+		node.Progress = math.Min(1, node.Progress+dt/1.4)
+		if node.Progress >= 1 && !node.Done {
+			node.Done = true
+			ps.Carried.Add(node.Kind, 1)
+			r.Messages = append(r.Messages, ps.Name+" mined "+node.Kind+".")
+		}
+	}
+}
+
+func nearestObjective(nodes []Objective, position Vec2, radius float64) (int, bool) {
+	best := -1
+	bestDist := radius
+	for i, node := range nodes {
+		if node.Done {
+			continue
+		}
+		d := Dist(position, node.Position)
+		if d <= bestDist {
+			best = i
+			bestDist = d
+		}
+	}
+	return best, best >= 0
 }
 
 func (r *RunState) fireWeapon(c *Catalog, ps *PlayerState, e *Entity) {

@@ -8,6 +8,7 @@ type Objective struct {
 	ID       EntityID `json:"id"`
 	Kind     string   `json:"kind"`
 	Position Vec2     `json:"position"`
+	Progress float64  `json:"progress"`
 	Done     bool     `json:"done"`
 }
 
