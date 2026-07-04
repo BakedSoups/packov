@@ -117,7 +117,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 6: Run Objectives and Extraction Loop
 
-- Status: server-authoritative hold-to-interact objective progress is implemented for map objectives and mining nodes; mined resources go into carried loot and client map markers show progress/done state. Extraction requirements, side objectives, visible countdown, wave telegraphs, and result stat breakdown remain.
+- Status: server-authoritative hold-to-interact objective progress is implemented for map objectives and mining nodes; mined resources go into carried loot and client map markers show progress/done state. Extraction now exposes scheduled wave ticks, visible countdown bars, and extraction-zone wave telegraphs. Extraction requirements, side objectives, and result stat breakdown remain.
 - Objectives need real interactions:
   - hold to activate uplink
   - mine resources

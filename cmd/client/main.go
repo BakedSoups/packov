@@ -244,6 +244,7 @@ func (a *App) applySnapshot(s game.Snapshot) {
 	a.run.Tick = s.Tick
 	a.run.Phase = s.Phase
 	a.run.Map = s.Map
+	a.run.NextWaveTick = s.NextWaveTick
 	a.run.Planet.Name = s.Planet
 	a.run.Entities = map[game.EntityID]*game.Entity{}
 	for i := range s.Entities {
@@ -335,6 +336,10 @@ func (a *App) drawMap(screen *ebiten.Image) {
 	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 130, 7, color.RGBA{46, 58, 74, 210}, false)
 	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 121, 4, color.RGBA{47, 178, 255, 210}, false)
 	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 90, 4, color.RGBA{47, 178, 255, 145}, false)
+	if a.run.NextWaveTick > a.run.Tick && a.run.NextWaveTick-a.run.Tick <= uint64(game.TickRate*3) {
+		pulse := 10 + math.Sin(float64(a.run.Tick)/3)*6
+		vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), float32(142+pulse), 6, color.RGBA{255, 91, 94, 220}, false)
+	}
 }
 
 func drawObjectiveMarker(screen *ebiten.Image, p game.Vec2, objective game.Objective, fill color.RGBA) {
@@ -415,6 +420,37 @@ func (a *App) drawCombatHUD(screen *ebiten.Image) {
 	if boss := a.primaryBoss(); boss != nil {
 		drawBar(screen, screenW/2-240, 24, 480, 18, boss.HP/boss.MaxHP, color.RGBA{199, 86, 255, 255}, strings.ToUpper(a.catalog.BossByID[boss.DefID].Name))
 	}
+	if extracting, remaining := a.extractionRemaining(); extracting {
+		drawBar(screen, screenW/2-180, 54, 360, 16, remaining/45, color.RGBA{247, 205, 92, 255}, fmt.Sprintf("EXTRACT %.0fs", math.Ceil(remaining)))
+	}
+	if waveRemaining := a.waveRemaining(); waveRemaining >= 0 {
+		drawBar(screen, screenW/2-150, 78, 300, 12, waveRemaining/7, color.RGBA{255, 91, 94, 255}, fmt.Sprintf("WAVE %.0fs", math.Ceil(waveRemaining)))
+	}
+}
+
+func (a *App) extractionRemaining() (bool, float64) {
+	best := math.MaxFloat64
+	for _, ps := range a.run.Players {
+		if !ps.Extracting || ps.Extracted || ps.Downed {
+			continue
+		}
+		elapsed := float64(a.run.Tick-ps.ExtractStart) / game.TickRate
+		remaining := math.Max(0, 45-elapsed)
+		if remaining < best {
+			best = remaining
+		}
+	}
+	if best == math.MaxFloat64 {
+		return false, 0
+	}
+	return true, best
+}
+
+func (a *App) waveRemaining() float64 {
+	if a.run.NextWaveTick == 0 || a.run.NextWaveTick <= a.run.Tick {
+		return -1
+	}
+	return float64(a.run.NextWaveTick-a.run.Tick) / game.TickRate
 }
 
 func drawBar(screen *ebiten.Image, x, y, w, h float32, pct float64, fill color.RGBA, label string) {

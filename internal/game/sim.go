@@ -85,19 +85,21 @@ type RunState struct {
 	Players       map[PlayerID]*PlayerState `json:"players"`
 	PendingInputs map[PlayerID]InputCommand `json:"-"`
 	Messages      []string                  `json:"messages"`
+	NextWaveTick  uint64                    `json:"next_wave_tick,omitempty"`
 	nextID        EntityID
 	rng           *rand.Rand
 }
 
 type Snapshot struct {
-	RunID    string        `json:"run_id"`
-	Tick     uint64        `json:"tick"`
-	Phase    RunPhase      `json:"phase"`
-	Planet   string        `json:"planet"`
-	Map      PlanetMap     `json:"map"`
-	Entities []Entity      `json:"entities"`
-	Players  []PlayerState `json:"players"`
-	Messages []string      `json:"messages"`
+	RunID        string        `json:"run_id"`
+	Tick         uint64        `json:"tick"`
+	Phase        RunPhase      `json:"phase"`
+	Planet       string        `json:"planet"`
+	Map          PlanetMap     `json:"map"`
+	Entities     []Entity      `json:"entities"`
+	Players      []PlayerState `json:"players"`
+	Messages     []string      `json:"messages"`
+	NextWaveTick uint64        `json:"next_wave_tick,omitempty"`
 }
 
 func NewRun(id string, catalog *Catalog, planetID string, seed int64) *RunState {
@@ -207,6 +209,9 @@ func (r *RunState) updatePlayers(c *Catalog, dt float64) {
 				ps.Extracting = true
 				ps.ExtractStart = r.Tick
 				r.Phase = PhaseExtraction
+				if r.NextWaveTick == 0 {
+					r.NextWaveTick = r.Tick + uint64(TickRate*7)
+				}
 				r.Messages = append(r.Messages, "Extraction beacon broadcast. Defend the zone.")
 			}
 		}
@@ -626,8 +631,20 @@ func (r *RunState) updateExtraction(c *Catalog) {
 			}
 		}
 	}
-	if anyExtracting && r.Tick%uint64(TickRate*7) == 0 {
+	if !anyExtracting {
+		r.NextWaveTick = 0
+		return
+	}
+	if r.NextWaveTick == 0 {
+		r.NextWaveTick = r.Tick + uint64(TickRate*7)
+	}
+	if r.NextWaveTick > r.Tick && r.NextWaveTick-r.Tick == uint64(TickRate*3) {
+		r.Messages = append(r.Messages, "Enemy wave inbound at extraction.")
+	}
+	if r.Tick >= r.NextWaveTick {
 		r.spawnWave(c, 6+r.Planet.Threat*2, r.Map.Extraction)
+		r.Messages = append(r.Messages, "Extraction wave has arrived.")
+		r.NextWaveTick = r.Tick + uint64(TickRate*7)
 	}
 }
 
@@ -764,7 +781,7 @@ func (r *RunState) Snapshot() Snapshot {
 	if len(msg) > 8 {
 		msg = msg[len(msg)-8:]
 	}
-	return Snapshot{RunID: r.ID, Tick: r.Tick, Phase: r.Phase, Planet: r.Planet.Name, Map: r.Map, Entities: entities, Players: players, Messages: msg}
+	return Snapshot{RunID: r.ID, Tick: r.Tick, Phase: r.Phase, Planet: r.Planet.Name, Map: r.Map, Entities: entities, Players: players, Messages: msg, NextWaveTick: r.NextWaveTick}
 }
 
 func DefaultLoadout() Loadout {

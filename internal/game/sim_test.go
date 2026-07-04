@@ -114,6 +114,43 @@ func TestExtractedRunCompletesWithCarriedLootIntactForSettlement(t *testing.T) {
 	}
 }
 
+func TestExtractionSchedulesTelegraphedWaves(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("extract-waves", c, "verdant", 42)
+	r.AddPlayer("p1", "pilot", DefaultLoadout())
+	player := r.Entities[r.Players["p1"].EntityID]
+	player.Position = r.Map.Extraction
+	r.ApplyInput(InputCommand{PlayerID: "p1", Aim: player.Position.Add(V(1, 0)), Extract: true})
+	r.Step(c)
+	firstWave := r.NextWaveTick
+	if firstWave <= r.Tick {
+		t.Fatalf("expected future wave tick, tick %d wave %d", r.Tick, firstWave)
+	}
+	telegraphTick := firstWave - uint64(TickRate*3)
+	for r.Tick < telegraphTick-1 {
+		r.ApplyInput(InputCommand{PlayerID: "p1", Aim: player.Position.Add(V(1, 0))})
+		r.Step(c)
+	}
+	r.Step(c)
+	if len(r.Messages) == 0 || r.Messages[len(r.Messages)-1] != "Enemy wave inbound at extraction." {
+		t.Fatalf("expected wave telegraph message, got %+v", r.Messages)
+	}
+	before := enemyCount(r)
+	for r.Tick < firstWave {
+		r.Step(c)
+	}
+	r.Step(c)
+	if enemyCount(r) <= before {
+		t.Fatalf("expected extraction wave enemies, before %d after %d", before, enemyCount(r))
+	}
+	if r.NextWaveTick <= r.Tick {
+		t.Fatalf("expected next wave rescheduled, tick %d wave %d", r.Tick, r.NextWaveTick)
+	}
+}
+
 func TestObjectiveInteractionCompletesObjective(t *testing.T) {
 	c, err := LoadCatalog("../../content/game.json")
 	if err != nil {
@@ -310,4 +347,14 @@ func hasTag(tags []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func enemyCount(r *RunState) int {
+	count := 0
+	for _, e := range r.Entities {
+		if e.Kind == EntityEnemy {
+			count++
+		}
+	}
+	return count
 }
