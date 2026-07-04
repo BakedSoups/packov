@@ -2,6 +2,25 @@
 
 This file captures the current hands-on gameplay notes and the next improvements needed before the game feels coherent. `docs/ROADMAP.md` remains the long-term roadmap; this file is the short-term execution plan.
 
+## Execution Rule
+
+- Keep working through this file until every actionable item is implemented, verified, and committed.
+- Do not treat a feature as done when only one layer exists. Finish the full integration path before moving on:
+  - content/data definitions
+  - simulation/gameplay behavior
+  - server authority and validation
+  - persistence or persistence contract
+  - client rendering and UI
+  - input/controller flow
+  - tests or smoke checks
+  - roadmap/plan checkbox or note update
+  - proper git commit
+- When context is compacted or memory gets tight, resume from this file and the latest git log rather than restarting from scratch.
+- Prefer small, coherent commits, but each commit should leave the game runnable.
+- If a large item must be split, split by complete vertical slices, not half-finished layers.
+- After each slice, run the relevant Go tests and WASM build when client code changed.
+- Keep generated artifacts out of git unless the repo explicitly tracks them.
+
 ## Immediate Observations
 
 - Base world enemies reach the player, stop, stare, and jitter around contact range.
