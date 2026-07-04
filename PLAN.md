@@ -123,6 +123,89 @@ This file captures the current hands-on gameplay notes and the next improvements
 - Add auctions after basic buy/sell feels solid.
 - Add audit events for all economy mutations.
 
+## Priority 7A: Crafting and Progression Tree
+
+- Yes: the game needs an explicit tree that turns enemy drops and boss components into usable unlocks.
+- The tree should be horizontal, not raw power creep. Crafted gear should unlock roles, playstyles, counters, utility, cosmetics, and access rather than strictly higher damage.
+- Item flow should be:
+  - kill enemies
+  - mine resources
+  - defeat bosses
+  - extract successfully
+  - bank components
+  - discover or buy blueprints
+  - craft unlocks
+  - equip sidegrades
+  - repeat into harder planets/events
+- Normal enemies should mostly drop common/uncommon materials:
+  - alien alloy
+  - bio gel
+  - chitin plates
+  - reactor scrap
+  - unstable spores
+  - cryo shards
+- Elite enemies should drop role-specific components:
+  - targeting lenses
+  - armored cores
+  - venom sacs
+  - phase coils
+  - shield emitters
+  - drone servos
+- Bosses should drop exclusive components, not finished gear:
+  - Hive Queen: hive egg, queen carapace, pheromone gland
+  - Ancient Mech: ancient AI chip, servo heart, rail actuator
+  - Void Leviathan: void crystal, gravity sac, phase membrane
+  - Crystal Titan: crystal heart, prism shard, refractor plate
+  - Space Worm: burrow core, worm scale, seismic tooth
+- Blueprints should control major unlocks:
+  - weapon blueprints
+  - armor blueprints
+  - hull blueprints
+  - drone blueprints
+  - module blueprints
+  - ability blueprints
+  - cosmetic blueprints
+  - planet access coordinates
+- Crafting branches needed:
+  - Weapons: machine gun variants, shotgun, railgun, laser, flamethrower, rocket launcher, plasma cannon
+  - Armor: light shield, hazard suit, reactive plating, phase mesh, medic rig
+  - Hulls: scout, bruiser, interceptor, carrier, engineer, extractor
+  - Drones: combat drone, mining drone, repair drone, shield drone, decoy drone
+  - Modules: ammo converter, dash capacitor, extraction beacon booster, loot scanner, boss detector
+  - Abilities: dash, shield, drone, turret, EMP, heal pulse, gravity anchor, phase blink
+  - Cosmetics: trails, badges, outline styles, hull skins, boss trophies, guild emblems
+  - Planet access: coordinates, event keys, boss lures, derelict signal maps
+- Example recipes:
+  - Railgun = railgun blueprint + quantum cores + rail actuator + alien alloy
+  - Shield Drone = drone blueprint + shield emitters + drone servos + plasma batteries
+  - Hazard Armor = armor blueprint + chitin plates + cryo shards + reactor scrap
+  - Void Dash Module = module blueprint + void crystal + phase membrane + dash capacitor
+  - Hive Trail Cosmetic = cosmetic blueprint + hive egg + pheromone gland
+- UI needed for the tree:
+  - visual recipe graph
+  - locked/unlocked nodes
+  - missing components
+  - where-to-find hints
+  - blueprint source
+  - boss source
+  - marketplace shortcut for tradable components
+  - craft preview
+  - sidegrade stat comparison
+- Backend/data needed:
+  - recipe graph data file
+  - component tags
+  - blueprint unlock table
+  - account crafted unlocks
+  - component provenance/audit
+  - tradable versus bound item flags
+  - seasonal recipe flags
+- Economy rules:
+  - Common components should be tradable.
+  - Most boss components should be tradable unless tied to prestige unlocks.
+  - Crafted gameplay unlocks should usually be account-bound.
+  - Cosmetics can be tradable depending on event rarity.
+  - Premium cosmetics must never be ingredients for gameplay gear.
+
 ## Priority 8: Missing Core Game Systems
 
 - Planet selection screen with threat, biome, resources, boss, event modifiers, and party readiness.
@@ -221,14 +304,16 @@ This file captures the current hands-on gameplay notes and the next improvements
 1. Fix enemy contact states and remove jitter at melee range.
 2. Add prominent player health/shield HUD and hit feedback.
 3. Stabilize crafting input and recipe detail UI.
-4. Add primitive asset API and style tokens.
-5. Prototype Go-only 3D-looking station backdrop.
-6. Add weapon-specific projectile primitives and hit effects.
-7. Add objective interaction system.
-8. Add extraction countdown/wave telegraphs.
-9. Add run result stat breakdown.
-10. Add planet selection and mission panels.
-11. Decide whether to integrate Three.js for menu-only decorative background.
-12. Move persistence from memory fallback to real SpaceTimeDB reducers.
-13. Replace full snapshots with deltas and interest management.
-14. Add CI and browser smoke tests.
+4. Add crafting/progression tree data structures and content.
+5. Add crafting tree UI with missing-component hints.
+6. Add primitive asset API and style tokens.
+7. Prototype Go-only 3D-looking station backdrop.
+8. Add weapon-specific projectile primitives and hit effects.
+9. Add objective interaction system.
+10. Add extraction countdown/wave telegraphs.
+11. Add run result stat breakdown.
+12. Add planet selection and mission panels.
+13. Decide whether to integrate Three.js for menu-only decorative background.
+14. Move persistence from memory fallback to real SpaceTimeDB reducers.
+15. Replace full snapshots with deltas and interest management.
+16. Add CI and browser smoke tests.
