@@ -47,6 +47,27 @@ func TestQueueRejectsUnknownPlanet(t *testing.T) {
 	}
 }
 
+func TestCreateChatMessageSanitizesAndRateLimits(t *testing.T) {
+	catalog := game.DefaultCatalogForClient()
+	hub := NewHub(catalog, NewMemoryStore(), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	s := &Session{id: "p1", name: "Pilot"}
+	msg, err := hub.createChatMessage(s, "global", "  hello    squad  ")
+	if err != nil {
+		t.Fatalf("chat: %v", err)
+	}
+	if msg.Body != "hello squad" || msg.Channel != "global" {
+		t.Fatalf("chat should be sanitized, got %+v", msg)
+	}
+	for i := 0; i < 4; i++ {
+		if _, err := hub.createChatMessage(s, "global", "ok"); err != nil {
+			t.Fatalf("chat %d: %v", i, err)
+		}
+	}
+	if _, err := hub.createChatMessage(s, "global", "too much"); err == nil {
+		t.Fatal("expected chat rate limit")
+	}
+}
+
 func TestMarketplaceCreateBuyCancel(t *testing.T) {
 	ctx := context.Background()
 	catalog := game.DefaultCatalogForClient()

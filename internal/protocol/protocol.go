@@ -15,6 +15,8 @@ type ClientMessage struct {
 	ItemID     string            `json:"item_id,omitempty"`
 	Quantity   int               `json:"quantity,omitempty"`
 	UnitPrice  int               `json:"unit_price,omitempty"`
+	Channel    string            `json:"channel,omitempty"`
+	Body       string            `json:"body,omitempty"`
 }
 
 type ServerMessage struct {
@@ -26,5 +28,7 @@ type ServerMessage struct {
 	WorldEvent *game.WorldEvent          `json:"world_event,omitempty"`
 	Missions   []game.DailyMission       `json:"missions,omitempty"`
 	Listings   []game.MarketplaceListing `json:"listings,omitempty"`
+	Chat       *game.ChatMessage         `json:"chat,omitempty"`
+	ChatLog    []game.ChatMessage        `json:"chat_log,omitempty"`
 	Error      string                    `json:"error,omitempty"`
 }

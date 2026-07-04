@@ -235,6 +235,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 8: Missing Core Game Systems
 
+- Status: minimal global/party/guild-compatible chat protocol is implemented with server-side sanitization, rate limiting, recent history, reliable broadcast, client `T` chat input, and HUD display. Guild membership, moderation tools, and persistence reducers for chat remain.
 - Planet selection screen with threat, biome, resources, boss, event modifiers, and party readiness.
 - Daily/weekly mission persistence.
 - Player profile screen with stats and unlocks.

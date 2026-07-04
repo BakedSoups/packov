@@ -30,6 +30,9 @@ type App struct {
 	account      *game.Account
 	loadout      game.Loadout
 	listings     []game.MarketplaceListing
+	chatLog      []game.ChatMessage
+	chatOpen     bool
+	chatText     string
 	settings     clientSettings
 	seq          uint64
 	camera       game.Vec2
@@ -95,8 +98,22 @@ func (a *App) Update() error {
 		return nil
 	}
 	if a.justPressed(ebiten.KeyEscape) {
+		if a.chatOpen {
+			a.chatOpen = false
+			a.chatText = ""
+			return nil
+		}
 		a.screen = screenStation
 		a.remote = false
+		return nil
+	}
+	if a.chatOpen {
+		a.updateChatInput()
+		a.updateTrails()
+		return nil
+	}
+	if a.justPressed(ebiten.KeyT) {
+		a.chatOpen = true
 		return nil
 	}
 	move := game.Vec2{}
@@ -199,6 +216,40 @@ func (a *App) shakeOffset() game.Vec2 {
 	return game.V(x, y)
 }
 
+func (a *App) updateChatInput() {
+	for _, r := range ebiten.AppendInputChars(nil) {
+		if r >= 32 && r != 127 && len(a.chatText) < 180 {
+			a.chatText += string(r)
+		}
+	}
+	if a.justPressed(ebiten.KeyBackspace) && len(a.chatText) > 0 {
+		a.chatText = a.chatText[:len(a.chatText)-1]
+	}
+	if a.justPressed(ebiten.KeyEnter) {
+		body := strings.TrimSpace(a.chatText)
+		a.chatOpen = false
+		a.chatText = ""
+		if body == "" {
+			return
+		}
+		if a.net != nil && a.net.isOpen() && a.hello {
+			a.net.send(protocol.ClientMessage{Type: "chat", Channel: "global", Body: body})
+			return
+		}
+		a.appendChat(game.ChatMessage{ID: fmt.Sprintf("local-%d", a.seq), Channel: "global", SenderID: a.player, Sender: a.look.Callsign, Body: body, SentAtUTC: time.Now().UTC()})
+	}
+}
+
+func (a *App) appendChat(msg game.ChatMessage) {
+	a.chatLog = append(a.chatLog, msg)
+	if len(a.chatLog) > 8 {
+		a.chatLog = a.chatLog[len(a.chatLog)-8:]
+	}
+	if a.run != nil {
+		a.run.Messages = append(a.run.Messages, msg.Sender+": "+msg.Body)
+	}
+}
+
 func (a *App) pollNetwork() {
 	if a.net == nil {
 		return
@@ -230,6 +281,9 @@ func (a *App) pollNetwork() {
 				msg.Catalog.BuildIndexes()
 				a.catalog = msg.Catalog
 			}
+			if msg.ChatLog != nil {
+				a.chatLog = msg.ChatLog
+			}
 		case "match", "snapshot":
 			if msg.Snapshot != nil {
 				a.applySnapshot(*msg.Snapshot)
@@ -249,6 +303,10 @@ func (a *App) pollNetwork() {
 		case "market":
 			a.listings = msg.Listings
 			a.status = fmt.Sprintf("market listings %d", len(a.listings))
+		case "chat":
+			if msg.Chat != nil {
+				a.appendChat(*msg.Chat)
+			}
 		case "error":
 			a.status = "server error: " + msg.Error
 		}
@@ -430,7 +488,29 @@ func (a *App) drawHUD(screen *ebiten.Image) {
 		lines = append(lines, a.run.Messages[len(a.run.Messages)-1])
 	}
 	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 18, 18)
+	a.drawChatHUD(screen)
 	_ = ps
+}
+
+func (a *App) drawChatHUD(screen *ebiten.Image) {
+	x := 18
+	y := screenH - 255
+	start := 0
+	if len(a.chatLog) > 6 {
+		start = len(a.chatLog) - 6
+	}
+	lines := []string{}
+	for _, msg := range a.chatLog[start:] {
+		lines = append(lines, fmt.Sprintf("[%s] %s: %s", msg.Channel, msg.Sender, msg.Body))
+	}
+	if a.chatOpen {
+		lines = append(lines, "> "+a.chatText+"_")
+	} else {
+		lines = append(lines, "T chat")
+	}
+	vector.DrawFilledRect(screen, float32(x-8), float32(y-8), 520, float32(22+len(lines)*16), color.RGBA{10, 16, 24, 185}, false)
+	vector.StrokeRect(screen, float32(x-8), float32(y-8), 520, float32(22+len(lines)*16), 3, outlineColor(), false)
+	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), x, y)
 }
 
 func (a *App) drawCombatHUD(screen *ebiten.Image) {

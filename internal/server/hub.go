@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,10 +26,12 @@ type Hub struct {
 	runs        map[string]*game.RunState
 	players     map[game.PlayerID]*Session
 	market      map[string]game.MarketplaceListing
+	chat        []game.ChatMessage
 	settledRuns map[string]bool
 	match       game.Matchmaker
 	event       game.WorldEvent
 	nextListing uint64
+	nextChat    uint64
 }
 
 type Session struct {
@@ -41,6 +44,8 @@ type Session struct {
 	lastSeq          uint64
 	inputWindowStart time.Time
 	inputCount       int
+	chatWindowStart  time.Time
+	chatCount        int
 }
 
 func NewHub(c *game.Catalog, store Persistence, log *slog.Logger) *Hub {
@@ -134,8 +139,9 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 		}
 		h.mu.Unlock()
 		ev := h.event
+		chatLog := h.chatHistory()
 		missions := game.DailyMissions(time.Now())
-		if err := s.write(ctx, protocol.ServerMessage{Type: "hello", PlayerID: id, Account: &account, Catalog: h.catalog, WorldEvent: &ev, Missions: missions}); err != nil {
+		if err := s.write(ctx, protocol.ServerMessage{Type: "hello", PlayerID: id, Account: &account, Catalog: h.catalog, WorldEvent: &ev, Missions: missions, ChatLog: chatLog}); err != nil {
 			return err
 		}
 		if s.runID != "" {
@@ -264,6 +270,12 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 		}
 		_ = s.write(ctx, protocol.ServerMessage{Type: "account", Account: &s.account})
 		h.broadcast(protocol.ServerMessage{Type: "market", Listings: h.marketListings()})
+	case "chat":
+		chat, err := h.createChatMessage(s, msg.Channel, msg.Body)
+		if err != nil {
+			return err
+		}
+		h.broadcast(protocol.ServerMessage{Type: "chat", Chat: &chat})
 	}
 	return nil
 }
@@ -276,6 +288,59 @@ func (h *Hub) marketListings() []game.MarketplaceListing {
 		listings = append(listings, listing)
 	}
 	return listings
+}
+
+func (h *Hub) chatHistory() []game.ChatMessage {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	out := make([]game.ChatMessage, len(h.chat))
+	copy(out, h.chat)
+	return out
+}
+
+func (h *Hub) createChatMessage(s *Session, channel, body string) (game.ChatMessage, error) {
+	if s.id == "" {
+		return game.ChatMessage{}, fmt.Errorf("authenticate first")
+	}
+	now := time.Now()
+	if now.Sub(s.chatWindowStart) > 10*time.Second {
+		s.chatWindowStart = now
+		s.chatCount = 0
+	}
+	s.chatCount++
+	if s.chatCount > 5 {
+		return game.ChatMessage{}, fmt.Errorf("chat rate exceeded")
+	}
+	channel = strings.TrimSpace(channel)
+	if channel == "" {
+		channel = "global"
+	}
+	if channel != "global" && channel != "guild" && channel != "party" {
+		return game.ChatMessage{}, fmt.Errorf("unsupported chat channel")
+	}
+	body = strings.Join(strings.Fields(strings.TrimSpace(body)), " ")
+	if body == "" {
+		return game.ChatMessage{}, fmt.Errorf("empty chat message")
+	}
+	if len(body) > 180 {
+		return game.ChatMessage{}, fmt.Errorf("chat message too long")
+	}
+	h.mu.Lock()
+	h.nextChat++
+	chat := game.ChatMessage{
+		ID:        fmt.Sprintf("chat-%06d", h.nextChat),
+		Channel:   channel,
+		SenderID:  s.id,
+		Sender:    s.name,
+		Body:      body,
+		SentAtUTC: now.UTC(),
+	}
+	h.chat = append(h.chat, chat)
+	if len(h.chat) > 50 {
+		h.chat = h.chat[len(h.chat)-50:]
+	}
+	h.mu.Unlock()
+	return chat, nil
 }
 
 func (h *Hub) createListing(ctx context.Context, s *Session, itemID string, quantity, unitPrice int) (game.MarketplaceListing, error) {
