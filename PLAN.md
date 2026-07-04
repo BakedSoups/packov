@@ -104,6 +104,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 5: Crafting UI Stability
 
+- Status: crafting now has stable selection, confirmation, recipe details, missing-component indicators, and short UI notices separate from network status.
 - Debounce menu input so holding a key does not cause rapid unintended state changes.
 - Add a selected recipe detail panel instead of only text rows.
 - Show missing components in red and available components in green.

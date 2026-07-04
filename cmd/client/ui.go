@@ -30,12 +30,13 @@ const (
 )
 
 type menuState struct {
-	Index       int
-	EditIndex   int
-	SettingsIdx int
-	LoadoutIdx  int
-	CraftIdx    int
-	MarketIdx   int
+	Index        int
+	EditIndex    int
+	SettingsIdx  int
+	LoadoutIdx   int
+	CraftIdx     int
+	MarketIdx    int
+	CraftConfirm bool
 }
 
 var (
@@ -196,6 +197,10 @@ func (a *App) sellFirstInventoryItem() {
 
 func (a *App) updateCrafting() {
 	if a.justPressed(ebiten.KeyEscape) {
+		if a.menu.CraftConfirm {
+			a.menu.CraftConfirm = false
+			return
+		}
 		a.screen = screenStation
 		return
 	}
@@ -204,11 +209,18 @@ func (a *App) updateCrafting() {
 	}
 	if a.justPressed(ebiten.KeyArrowUp) || a.justPressed(ebiten.KeyW) {
 		a.menu.CraftIdx = (a.menu.CraftIdx + len(a.catalog.Recipes) - 1) % len(a.catalog.Recipes)
+		a.menu.CraftConfirm = false
 	}
 	if a.justPressed(ebiten.KeyArrowDown) || a.justPressed(ebiten.KeyS) {
 		a.menu.CraftIdx = (a.menu.CraftIdx + 1) % len(a.catalog.Recipes)
+		a.menu.CraftConfirm = false
 	}
 	if a.justPressed(ebiten.KeyEnter) || a.justPressed(ebiten.KeySpace) {
+		if !a.menu.CraftConfirm {
+			a.menu.CraftConfirm = true
+			a.notice("Confirm craft: " + a.catalog.Recipes[a.menu.CraftIdx].Output)
+			return
+		}
 		a.craftSelected()
 	}
 }
@@ -220,17 +232,25 @@ func (a *App) craftSelected() {
 	recipe := a.catalog.Recipes[a.menu.CraftIdx]
 	if a.net != nil && a.net.isOpen() && a.hello {
 		a.net.send(protocol.ClientMessage{Type: "craft", RecipeID: recipe.ID})
-		a.status = "crafting " + recipe.Output
+		a.notice("Crafting " + recipe.Output)
+		a.menu.CraftConfirm = false
 		return
 	}
 	if a.account == nil {
 		return
 	}
 	if err := game.Craft(a.account, recipe); err != nil {
-		a.status = "craft failed: " + err.Error()
+		a.notice("Craft failed: " + err.Error())
+		a.menu.CraftConfirm = false
 		return
 	}
-	a.status = "crafted " + recipe.Output
+	a.notice("Crafted " + recipe.Output)
+	a.menu.CraftConfirm = false
+}
+
+func (a *App) notice(text string) {
+	a.uiNotice = text
+	a.uiNoticeTick = a.seq
 }
 
 func (a *App) updateLoadout() {
@@ -395,6 +415,9 @@ func (a *App) drawMenuBackground(screen *ebiten.Image) {
 	vector.DrawFilledRect(screen, 0, 0, screenW, 84, color.RGBA{10, 16, 24, 245}, false)
 	vector.DrawFilledRect(screen, 0, screenH-72, screenW, 72, color.RGBA{10, 16, 24, 235}, false)
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("PACKOV    Net %s", a.status), 24, 24)
+	if a.uiNotice != "" && a.seq-a.uiNoticeTick < 180 {
+		ebitenutil.DebugPrintAt(screen, a.uiNotice, 24, screenH-46)
+	}
 }
 
 func (a *App) drawTitle(screen *ebiten.Image) {
@@ -451,16 +474,72 @@ func (a *App) drawCrafting(screen *ebiten.Image) {
 		if i == a.menu.CraftIdx {
 			prefix = "> "
 		}
-		lines = append(lines, fmt.Sprintf("%s%s -> %s   %d credits", prefix, recipe.ID, recipe.Output, recipe.Credits))
-		for item, count := range recipe.Costs {
-			lines = append(lines, fmt.Sprintf("  %s x%d", item, count))
+		state := "READY"
+		if !a.canCraft(recipe) {
+			state = "MISSING"
 		}
+		lines = append(lines, fmt.Sprintf("%s%-18s %-16s %s", prefix, recipe.ID, recipe.Output, state))
 	}
 	if len(lines) == 0 {
 		lines = append(lines, "No recipes loaded")
 	}
 	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 82, 220)
-	ebitenutil.DebugPrintAt(screen, "Enter crafts    Esc returns", 82, 560)
+	a.drawRecipeDetail(screen)
+	footer := "Enter selects    Esc returns"
+	if a.menu.CraftConfirm {
+		footer = "Enter confirms craft    Esc cancels"
+	}
+	ebitenutil.DebugPrintAt(screen, footer, 82, 560)
+}
+
+func (a *App) drawRecipeDetail(screen *ebiten.Image) {
+	if len(a.catalog.Recipes) == 0 || a.menu.CraftIdx >= len(a.catalog.Recipes) {
+		return
+	}
+	recipe := a.catalog.Recipes[a.menu.CraftIdx]
+	x := float32(570)
+	y := float32(205)
+	vector.DrawFilledRect(screen, x-18, y-18, 560, 315, color.RGBA{18, 28, 38, 230}, false)
+	vector.StrokeRect(screen, x-18, y-18, 560, 315, 4, outlineColor(), false)
+	ebitenutil.DebugPrintAt(screen, "OUTPUT  "+recipe.Output, int(x), int(y))
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("CREDITS %d / %d", accountCredits(a.account), recipe.Credits), int(x), int(y+28))
+	ready := a.canCraft(recipe)
+	readyText := "READY"
+	if !ready {
+		readyText = "MISSING COMPONENTS"
+	}
+	ebitenutil.DebugPrintAt(screen, readyText, int(x), int(y+58))
+	rowY := y + 96
+	for item, need := range recipe.Costs {
+		have := a.inventoryCount(item)
+		clr := color.RGBA{80, 205, 104, 255}
+		if have < need {
+			clr = color.RGBA{255, 91, 94, 255}
+		}
+		vector.DrawFilledRect(screen, x, rowY+2, 16, 16, clr, false)
+		vector.StrokeRect(screen, x, rowY+2, 16, 16, 2, outlineColor(), false)
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%s  %d / %d", item, have, need), int(x+26), int(rowY))
+		rowY += 28
+	}
+	if a.menu.CraftConfirm {
+		vector.DrawFilledRect(screen, x, y+252, 240, 30, color.RGBA{247, 205, 92, 240}, false)
+		vector.StrokeRect(screen, x, y+252, 240, 30, 3, outlineColor(), false)
+		ebitenutil.DebugPrintAt(screen, "CONFIRM CRAFT", int(x+16), int(y+260))
+	}
+}
+
+func (a *App) canCraft(recipe game.RecipeDef) bool {
+	if a.account == nil || a.account.Credits < recipe.Credits {
+		return false
+	}
+	return a.account.Inventory.Has(recipe.Costs)
+}
+
+func (a *App) inventoryCount(item string) int {
+	if a.account == nil {
+		return 0
+	}
+	return a.account.Inventory.Items[item]
 }
 
 func (a *App) drawMarketplace(screen *ebiten.Image) {

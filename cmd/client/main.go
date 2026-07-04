@@ -38,6 +38,8 @@ type App struct {
 	snapshotAt   time.Time
 	prevEntities map[game.EntityID]game.Entity
 	status       string
+	uiNotice     string
+	uiNoticeTick uint64
 	remote       bool
 	hello        bool
 	queued       bool
