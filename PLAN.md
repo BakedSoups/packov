@@ -233,6 +233,101 @@ This file captures the current hands-on gameplay notes and the next improvements
 - Player movement needs acceleration/friction tuning, dash feel, collision response, and controller tuning.
 - There is no revive/downed co-op loop yet; co-op failure is too binary.
 
+## Priority 9A: Extraction Shooter Feature Checklist
+
+- Run structure:
+  - main objectives
+  - optional side objectives
+  - timed events during the run
+  - extraction call-in
+  - extraction defense
+  - failed extraction consequences
+  - run result/stat screen
+- Boss structure:
+  - world bosses
+  - mini-bosses
+  - roaming elites
+  - boss arenas
+  - phase changes
+  - weak points
+  - summoned adds
+  - environmental hazards
+  - exclusive components
+  - rare cosmetic drops
+  - boss-specific crafting trees
+- Enemy ecology:
+  - patrols
+  - roaming squads
+  - ambushes
+  - alarm/call-for-help units
+  - ranged enemies
+  - tank enemies
+  - swarm enemies
+  - support/healer enemies
+  - objective defenders
+  - extraction wave enemies
+- Loot and risk:
+  - carried loot separate from banked loot
+  - backpack/cargo capacity
+  - valuable heavy items that slow movement
+  - loot rarity
+  - hidden caches
+  - locked containers
+  - boss trophies
+  - extract-only items
+  - optional insurance or recovery mechanics
+- Gear progression:
+  - weapons
+  - armor
+  - ship hulls
+  - modules
+  - abilities
+  - drones
+  - consumables
+  - crafting components
+  - blueprints
+  - sidegrades instead of pure power creep
+- Map features:
+  - procedural points of interest
+  - hazard zones
+  - weather
+  - locked rooms
+  - resource nodes
+  - enemy nests
+  - boss lairs
+  - extraction zones
+  - event sites
+  - derelict structures
+- Social and PvP:
+  - squads/parties
+  - revives
+  - shared loot rules
+  - trading
+  - player marketplace
+  - optional PvP zones
+  - betrayal/stealing rules if PvP exists
+  - guild objectives
+- Live-service hooks:
+  - daily missions
+  - weekly missions
+  - rotating bosses
+  - limited events
+  - community goals
+  - seasons
+  - leaderboards
+  - event cosmetics
+- Highest-priority Packov gaps:
+  - real objectives in runs
+  - mini-bosses and roaming elites
+  - boss arenas and boss mechanics
+  - backpack/carry capacity
+  - hidden caches and locked containers
+  - revive/downed co-op loop
+  - extraction wave telegraphs
+  - run result stats
+  - gear/crafting tree from drops
+  - stronger planet POIs and hazard zones
+
 ## Priority 10: Missing Station and UX Flow
 
 - Title/login flow needs player naming, account token visibility, and reconnect feedback.
