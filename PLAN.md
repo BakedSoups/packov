@@ -405,6 +405,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 14: Missing Audio and Feel
 
+- Status: screen shake setting is now functional and bounded; authoritative player hit ticks trigger a short world-camera shake while HUD/UI remain stable. Audio layer, impact particles, muzzle flashes, music, and haptic hooks remain.
 - No audio layer yet.
 - Need weapon sounds, enemy hit sounds, player damage sounds, loot pickup, crafting, market, menu selection, extraction alarm, boss phase stingers.
 - Need screen shake with setting toggle and intensity caps.

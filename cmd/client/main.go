@@ -40,6 +40,9 @@ type App struct {
 	status       string
 	uiNotice     string
 	uiNoticeTick uint64
+	shakeUntil   uint64
+	shakePower   float64
+	lastHitSeen  uint64
 	remote       bool
 	hello        bool
 	queued       bool
@@ -133,6 +136,10 @@ func (a *App) Update() error {
 	if ps := a.run.Players[a.player]; ps != nil {
 		if e := a.run.Entities[ps.EntityID]; e != nil {
 			a.camera = e.Position
+			if e.HitTick > a.lastHitSeen {
+				a.triggerShake(14, 8)
+				a.lastHitSeen = e.HitTick
+			}
 			if e.Velocity.Len2() > 20 {
 				a.trails = append(a.trails, trail{Pos: e.Position.Sub(game.FromAngle(e.Rotation).Mul(25)), TTL: 0.35})
 			}
@@ -169,6 +176,27 @@ func (a *App) updateTrails() {
 		}
 	}
 	a.trails = dst
+}
+
+func (a *App) triggerShake(ticks uint64, power float64) {
+	if !a.settings.ScreenShake {
+		return
+	}
+	if power > a.shakePower || a.seq+ticks > a.shakeUntil {
+		a.shakePower = math.Min(power, 12)
+		a.shakeUntil = a.seq + ticks
+	}
+}
+
+func (a *App) shakeOffset() game.Vec2 {
+	if !a.settings.ScreenShake || a.seq >= a.shakeUntil || a.shakePower <= 0 {
+		return game.Vec2{}
+	}
+	remaining := float64(a.shakeUntil-a.seq) / float64(game.TickRate)
+	amp := a.shakePower * math.Min(1, remaining*6)
+	x := math.Sin(float64(a.seq)*2.31) * amp
+	y := math.Cos(float64(a.seq)*1.87) * amp * 0.65
+	return game.V(x, y)
 }
 
 func (a *App) pollNetwork() {
@@ -266,6 +294,8 @@ func (a *App) Draw(screen *ebiten.Image) {
 		a.drawMenu(screen)
 		return
 	}
+	baseCamera := a.camera
+	a.camera = a.camera.Add(a.shakeOffset())
 	a.drawGrid(screen)
 	a.drawMap(screen)
 	for _, t := range a.trails {
@@ -278,6 +308,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 	}
 	a.drawCombatHUD(screen)
 	a.drawHUD(screen)
+	a.camera = baseCamera
 }
 
 func (a *App) renderEntity(e *game.Entity) game.Entity {
