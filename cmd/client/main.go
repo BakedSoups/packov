@@ -325,11 +325,11 @@ func (a *App) drawMap(screen *ebiten.Image) {
 	}
 	for _, o := range a.run.Map.Objectives {
 		p := worldToScreen(a.camera, o.Position)
-		drawPolygon(screen, p, 16, 4, 0.7, color.RGBA{247, 205, 92, 235})
+		drawPolygonWithOutline(screen, p, 16, 4, 0.7, primitiveStyle.Objective, primitiveStyle.OutlineStroke)
 	}
 	for _, r := range a.run.Map.Resources {
 		p := worldToScreen(a.camera, r.Position)
-		drawOutlinedCircle(screen, p, 8, color.RGBA{62, 214, 139, 235}, 3)
+		drawOutlinedCircle(screen, p, 8, primitiveStyle.Resource, 3)
 	}
 	ep := worldToScreen(a.camera, a.run.Map.Extraction)
 	vector.StrokeCircle(screen, float32(ep.X), float32(ep.Y), 130, 7, color.RGBA{46, 58, 74, 210}, false)
@@ -341,52 +341,24 @@ func (a *App) drawEntity(screen *ebiten.Image, e *game.Entity) {
 	p := worldToScreen(a.camera, e.Position)
 	switch e.Kind {
 	case game.EntityPlayer:
-		fill := color.RGBA{47, 178, 255, 255}
-		if a.recentHit(e, 10) {
-			fill = color.RGBA{255, 255, 255, 255}
-		}
-		drawOutlinedCircle(screen, p, e.Radius, fill, 5)
-		nose := []game.Vec2{
-			p.Add(game.FromAngle(e.Rotation).Mul(28)),
-			p.Add(game.FromAngle(e.Rotation + 2.55).Mul(15)),
-			p.Add(game.FromAngle(e.Rotation - 2.55).Mul(15)),
-		}
-		fillTriangle(screen, nose, color.RGBA{232, 248, 255, 255})
-		if e.Shield > 0 {
-			vector.StrokeCircle(screen, float32(p.X), float32(p.Y), float32(e.Radius+9), 5, color.RGBA{46, 58, 74, 185}, false)
-			vector.StrokeCircle(screen, float32(p.X), float32(p.Y), float32(e.Radius+14), 3, color.RGBA{47, 178, 255, 185}, false)
-		}
+		DrawPlayerShip(screen, p, e.Radius, e.Rotation, e.Shield > 0, a.recentHit(e, 10))
 	case game.EntityEnemy:
 		def := a.catalog.EnemyByID[e.DefID]
 		sides := map[string]int{"triangle": 3, "square": 4, "hexagon": 6, "octagon": 8}[def.Shape]
 		if sides == 0 {
 			sides = 3
 		}
-		fill := color.RGBA{255, 91, 94, 235}
-		if a.recentHit(e, 8) {
-			fill = color.RGBA{255, 238, 238, 255}
-		}
-		drawPolygon(screen, p, e.Radius, sides, e.Rotation, fill)
+		DrawEnemyShape(screen, p, e.Radius, sides, e.Rotation, a.recentHit(e, 8))
 		drawHealth(screen, p, e)
 	case game.EntityBoss:
-		fill := color.RGBA{199, 86, 255, 235}
-		if a.recentHit(e, 8) {
-			fill = color.RGBA{255, 238, 255, 255}
-		}
-		drawPolygon(screen, p, e.Radius, 8, e.Rotation, fill)
-		vector.StrokeCircle(screen, float32(p.X), float32(p.Y), float32(e.Radius+18+float64(e.Phase)*12), 3, color.RGBA{255, 210, 84, 180}, false)
-		for i := 0; i < 4+e.Phase; i++ {
-			ang := e.Rotation + float64(i)*math.Pi*2/float64(4+e.Phase)
-			module := p.Add(game.FromAngle(ang).Mul(e.Radius + 36))
-			drawPolygon(screen, module, 13, 4, ang, color.RGBA{255, 210, 84, 230})
-		}
+		DrawBossModule(screen, p, e.Radius, e.Phase, e.Rotation, a.recentHit(e, 8))
 		drawHealth(screen, p.Add(game.V(0, -e.Radius-24)), e)
 	case game.EntityBullet:
-		drawOutlinedCircle(screen, p, e.Radius+1, color.RGBA{255, 221, 76, 255}, 2.5)
+		DrawProjectile(screen, p, e.Radius, e.DefID, e.Rotation)
 	case game.EntityLoot:
-		drawPolygon(screen, p, 10, 6, float64(a.run.Tick)/18, rarityColor(a.catalog.LootByID[e.DefID].Rarity))
+		DrawLootNode(screen, p, a.catalog.LootByID[e.DefID].Rarity, a.run.Tick)
 	case game.EntityDrone, game.EntityTurret:
-		drawPolygon(screen, p, e.Radius, 4, float64(a.run.Tick)/12, color.RGBA{79, 235, 186, 235})
+		DrawAbilityEffect(screen, p, e.Radius, a.run.Tick)
 	}
 }
 
@@ -466,7 +438,7 @@ func drawHealth(screen *ebiten.Image, p game.Vec2, e *game.Entity) {
 }
 
 func drawPolygon(screen *ebiten.Image, center game.Vec2, radius float64, sides int, rotation float64, clr color.Color) {
-	drawPolygonWithOutline(screen, center, radius, sides, rotation, clr, 5)
+	drawPolygonWithOutline(screen, center, radius, sides, rotation, clr, primitiveStyle.OutlineStroke)
 }
 
 func drawPolygonWithOutline(screen *ebiten.Image, center game.Vec2, radius float64, sides int, rotation float64, clr color.Color, stroke float32) {
@@ -539,7 +511,7 @@ func fillTriangle(screen *ebiten.Image, pts []game.Vec2, clr color.Color) {
 }
 
 func outlineColor() color.Color {
-	return color.RGBA{46, 58, 74, 255}
+	return primitiveStyle.Outline
 }
 
 var solid *ebiten.Image
