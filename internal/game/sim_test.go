@@ -120,6 +120,73 @@ func TestEnemySteeringAddsOrganicLateralMovement(t *testing.T) {
 	t.Fatal("enemy not spawned")
 }
 
+func TestEnemyContactUsesCommittedAttackStates(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("contact", c, "verdant", 42)
+	r.AddPlayer("p1", "pilot", DefaultLoadout())
+	player := r.Entities[r.Players["p1"].EntityID]
+	player.Position = V(500, 500)
+	def := c.EnemyByID["skitter"]
+	r.spawnEnemy(def, V(430, 500))
+	var enemy *Entity
+	for _, e := range r.Entities {
+		if e.Kind == EntityEnemy {
+			enemy = e
+			break
+		}
+	}
+	if enemy == nil {
+		t.Fatal("enemy not spawned")
+	}
+	states := map[string]bool{}
+	for i := 0; i < 20; i++ {
+		r.updateAI(c, 1.0/TickRate)
+		states[enemy.AIState] = true
+		r.Tick++
+	}
+	if !states[AIOrbit] || !states[AILunge] {
+		t.Fatalf("expected orbit and lunge states, got %+v", states)
+	}
+}
+
+func TestEnemyMeleeDamageIsCooldownGated(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("cooldown", c, "verdant", 42)
+	r.AddPlayer("p1", "pilot", DefaultLoadout())
+	player := r.Entities[r.Players["p1"].EntityID]
+	player.Position = V(500, 500)
+	def := c.EnemyByID["skitter"]
+	r.spawnEnemy(def, V(500, 500))
+	var enemy *Entity
+	for _, e := range r.Entities {
+		if e.Kind == EntityEnemy {
+			enemy = e
+			break
+		}
+	}
+	enemy.AIState = AILunge
+	enemy.StateTick = 0
+	r.Tick = 4
+	r.resolveCombat(c)
+	afterFirstHit := player.HP
+	for i := 0; i < 10; i++ {
+		r.Tick++
+		r.resolveCombat(c)
+	}
+	if player.HP != afterFirstHit {
+		t.Fatalf("expected cooldown to prevent continuous damage, first %.2f now %.2f", afterFirstHit, player.HP)
+	}
+	if enemy.AIState != AIRecover {
+		t.Fatalf("expected recover after hit, got %s", enemy.AIState)
+	}
+}
+
 func enemyMinDistance(r *RunState) float64 {
 	best := math.MaxFloat64
 	for _, a := range r.Entities {

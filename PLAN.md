@@ -33,6 +33,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 1: Enemy Contact and Organic Movement
 
+- Status: contact-state foundation implemented with `approach`, `orbit`, `lunge`, `recover`, and `retreat`; melee damage is lunge/cooldown gated instead of continuous collision damage.
 - Add enemy behavior states instead of one continuous chase vector:
   - `approach`
   - `orbit`

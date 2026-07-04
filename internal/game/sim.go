@@ -36,6 +36,9 @@ type Entity struct {
 	CarriedItem string     `json:"carried_item,omitempty"`
 	Phase       int        `json:"phase"`
 	Shield      float64    `json:"shield"`
+	AIState     string     `json:"ai_state,omitempty"`
+	StateTick   uint64     `json:"state_tick,omitempty"`
+	NextAction  uint64     `json:"next_action,omitempty"`
 }
 
 type PlayerState struct {
@@ -60,6 +63,14 @@ const (
 	PhaseExtraction RunPhase = "extraction"
 	PhaseComplete   RunPhase = "complete"
 	PhaseFailed     RunPhase = "failed"
+)
+
+const (
+	AIApproach = "approach"
+	AIOrbit    = "orbit"
+	AILunge    = "lunge"
+	AIRecover  = "recover"
+	AIRetreat  = "retreat"
 )
 
 type RunState struct {
@@ -272,20 +283,7 @@ func (r *RunState) updateAI(c *Catalog, dt float64) {
 			offset := target.Position.Sub(e.Position)
 			dist := offset.Len()
 			if dist < def.Sense {
-				dir := offset.Normalize()
-				preferred := e.Radius + target.Radius + 18
-				desired := dir.Mul(def.Speed)
-				if dist < preferred {
-					desired = dir.Mul(-def.Speed * 0.45)
-				} else if dist < preferred+70 {
-					desired = desired.Mul(0.35)
-				}
-				strafe := V(-dir.Y, dir.X).Mul(math.Sin(float64(r.Tick)*0.045+float64(e.ID)) * def.Speed * 0.28)
-				separation := r.enemySeparation(e).Mul(def.Speed * 1.4)
-				e.Velocity = desired.Add(strafe).Add(separation).Clamp(def.Speed * 1.35)
-				if e.Velocity.Len2() > 0.01 {
-					e.Rotation = Angle(e.Velocity)
-				}
+				r.updateEnemyState(e, def, target, offset, dist)
 			}
 		case EntityBoss:
 			target := r.closestPlayer(e.Position)
@@ -333,6 +331,133 @@ func (r *RunState) integrate(dt float64) {
 			e.TTL -= dt
 		}
 	}
+}
+
+func (r *RunState) updateEnemyState(e *Entity, def EnemyDef, target *Entity, offset Vec2, dist float64) {
+	dir := offset.Normalize()
+	if e.AIState == "" {
+		e.AIState = AIApproach
+		e.StateTick = r.Tick
+	}
+	preferred := enemyPreferredRange(e, target, def)
+	attackRange := e.Radius + target.Radius + 12
+	lungeTicks := uint64(8)
+	recoverTicks := uint64(16)
+	if def.Shape == "square" {
+		lungeTicks = 11
+		recoverTicks = 20
+	}
+	if def.Shape == "hexagon" {
+		attackRange += 46
+	}
+
+	switch e.AIState {
+	case AILunge:
+		e.Velocity = dir.Mul(def.Speed * enemyLungeSpeed(def))
+		if r.Tick-e.StateTick >= lungeTicks {
+			r.setAIState(e, AIRecover)
+			e.NextAction = r.Tick + recoverTicks
+		}
+	case AIRecover:
+		backoff := dir.Mul(-def.Speed * 0.38)
+		orbit := enemyOrbit(e, def, dir, r.Tick).Mul(0.45)
+		e.Velocity = backoff.Add(orbit).Add(r.enemySeparation(e).Mul(def.Speed)).Clamp(def.Speed)
+		if r.Tick >= e.NextAction && dist > attackRange+10 {
+			r.setAIState(e, AIApproach)
+		} else if r.Tick >= e.NextAction {
+			r.setAIState(e, AIOrbit)
+		}
+	case AIRetreat:
+		e.Velocity = dir.Mul(-def.Speed * 0.7).Add(r.enemySeparation(e).Mul(def.Speed)).Clamp(def.Speed * 1.1)
+		if dist > preferred-12 {
+			r.setAIState(e, AIOrbit)
+		}
+	case AIOrbit:
+		if dist < attackRange {
+			r.setAIState(e, AIRetreat)
+			e.Velocity = dir.Mul(-def.Speed * 0.7).Add(r.enemySeparation(e).Mul(def.Speed)).Clamp(def.Speed * 1.1)
+			break
+		}
+		if r.Tick >= e.NextAction && dist < preferred+26 {
+			r.setAIState(e, AILunge)
+			e.Velocity = dir.Mul(def.Speed * enemyLungeSpeed(def))
+			break
+		}
+		hold := dir.Mul((dist - preferred) * 2.2)
+		orbit := enemyOrbit(e, def, dir, r.Tick)
+		e.Velocity = hold.Add(orbit).Add(r.enemySeparation(e).Mul(def.Speed * 1.2)).Clamp(def.Speed * 0.9)
+	default:
+		if dist < attackRange {
+			r.setAIState(e, AIRetreat)
+			e.Velocity = dir.Mul(-def.Speed * 0.7).Add(r.enemySeparation(e).Mul(def.Speed)).Clamp(def.Speed * 1.1)
+			break
+		}
+		if dist < preferred+45 {
+			r.setAIState(e, AIOrbit)
+			hold := dir.Mul((dist - preferred) * 2.2)
+			orbit := enemyOrbit(e, def, dir, r.Tick)
+			e.Velocity = hold.Add(orbit).Add(r.enemySeparation(e).Mul(def.Speed * 1.2)).Clamp(def.Speed * 0.9)
+			break
+		}
+		orbit := enemyOrbit(e, def, dir, r.Tick).Mul(0.25)
+		e.Velocity = dir.Mul(def.Speed).Add(orbit).Add(r.enemySeparation(e).Mul(def.Speed * 1.2)).Clamp(def.Speed * 1.2)
+	}
+	if e.Velocity.Len2() > 0.01 {
+		e.Rotation = Angle(e.Velocity)
+	}
+}
+
+func (r *RunState) setAIState(e *Entity, state string) {
+	if e.AIState == state {
+		return
+	}
+	e.AIState = state
+	e.StateTick = r.Tick
+}
+
+func enemyPreferredRange(e, target *Entity, def EnemyDef) float64 {
+	base := e.Radius + target.Radius
+	switch def.Shape {
+	case "triangle":
+		return base + 42
+	case "square":
+		return base + 34
+	case "hexagon":
+		return base + 96
+	case "octagon":
+		return base + 62
+	default:
+		return base + 50
+	}
+}
+
+func enemyLungeSpeed(def EnemyDef) float64 {
+	switch def.Shape {
+	case "triangle":
+		return 1.85
+	case "square":
+		return 1.2
+	case "hexagon":
+		return 0.75
+	default:
+		return 1.35
+	}
+}
+
+func enemyOrbit(e *Entity, def EnemyDef, dir Vec2, tick uint64) Vec2 {
+	side := 1.0
+	if e.ID%2 == 0 {
+		side = -1
+	}
+	wobble := 0.72 + 0.28*math.Sin(float64(tick)*0.035+float64(e.ID))
+	speed := def.Speed * 0.55 * wobble
+	if def.Shape == "triangle" {
+		speed *= 1.35
+	}
+	if def.Shape == "square" {
+		speed *= 0.45
+	}
+	return V(-dir.Y, dir.X).Mul(speed * side)
 }
 
 func (r *RunState) enemySeparation(e *Entity) Vec2 {
@@ -425,7 +550,17 @@ func (r *RunState) resolveCombat(c *Catalog) {
 				continue
 			}
 			if Dist(hostile.Position, player.Position) < hostile.Radius+player.Radius {
-				player.HP -= math.Max(1, hostile.Damage/float64(TickRate)-player.Shield*0.02)
+				damage := hostile.Damage / float64(TickRate)
+				if hostile.Kind == EntityEnemy {
+					if hostile.AIState != AILunge || r.Tick < hostile.StateTick+3 {
+						continue
+					}
+					damage = hostile.Damage
+					hostile.AIState = AIRecover
+					hostile.StateTick = r.Tick
+					hostile.NextAction = r.Tick + uint64(TickRate)
+				}
+				player.HP -= math.Max(1, damage-player.Shield*0.02)
 				if player.HP <= 0 {
 					ps.Downed = true
 					ps.Carried = NewInventory()
@@ -508,7 +643,7 @@ func (r *RunState) cleanup(c *Catalog) {
 
 func (r *RunState) spawnEnemy(def EnemyDef, pos Vec2) {
 	eid := r.next()
-	r.Entities[eid] = &Entity{ID: eid, Kind: EntityEnemy, DefID: def.ID, Position: pos, Radius: 17, HP: def.HP, MaxHP: def.HP, Damage: def.Damage}
+	r.Entities[eid] = &Entity{ID: eid, Kind: EntityEnemy, DefID: def.ID, Position: pos, Radius: 17, HP: def.HP, MaxHP: def.HP, Damage: def.Damage, AIState: AIApproach, StateTick: r.Tick}
 }
 
 func (r *RunState) spawnWave(c *Catalog, count int, around Vec2) {
