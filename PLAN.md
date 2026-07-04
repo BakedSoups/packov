@@ -413,6 +413,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 15: Missing Quality and Release Infrastructure
 
+- Status: Makefile has a `ci` target for focused Go tests and WASM build plus `docker-check`; GitHub Actions now runs tests, WASM build, Docker Compose config validation, and Docker image build on push/PR. Browser smoke/screenshot tests and production health/drain drills remain.
 - Need CI that runs Go tests, WASM build, Docker build, docker compose config, content validation, and linting.
 - Need Playwright/Ebitdock smoke tests for title, station, character editor, deploy, combat, death, extraction, crafting, and market.
 - Need screenshot/canvas nonblank checks after every visual change.
