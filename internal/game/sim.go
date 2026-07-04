@@ -7,6 +7,7 @@ import (
 )
 
 const TickRate = 30
+const InterestRadius = 980.0
 
 type EntityKind string
 
@@ -810,8 +811,25 @@ func (r *RunState) closestHostile(pos Vec2) *Entity {
 }
 
 func (r *RunState) Snapshot() Snapshot {
+	return r.snapshotFor("")
+}
+
+func (r *RunState) SnapshotForPlayer(playerID PlayerID) Snapshot {
+	return r.snapshotFor(playerID)
+}
+
+func (r *RunState) snapshotFor(playerID PlayerID) Snapshot {
+	var focus *Entity
+	if playerID != "" {
+		if ps := r.Players[playerID]; ps != nil {
+			focus = r.Entities[ps.EntityID]
+		}
+	}
 	entities := make([]Entity, 0, len(r.Entities))
 	for _, e := range r.Entities {
+		if focus != nil && !inInterestRange(focus, e) {
+			continue
+		}
 		entities = append(entities, *e)
 	}
 	players := make([]PlayerState, 0, len(r.Players))
@@ -823,6 +841,13 @@ func (r *RunState) Snapshot() Snapshot {
 		msg = msg[len(msg)-8:]
 	}
 	return Snapshot{RunID: r.ID, Tick: r.Tick, Phase: r.Phase, Planet: r.Planet.Name, Map: r.Map, Entities: entities, Players: players, Messages: msg, NextWaveTick: r.NextWaveTick}
+}
+
+func inInterestRange(focus, e *Entity) bool {
+	if e.ID == focus.ID || e.Kind == EntityPlayer || e.Kind == EntityBoss {
+		return true
+	}
+	return Dist(focus.Position, e.Position) <= InterestRadius
 }
 
 func DefaultLoadout() Loadout {

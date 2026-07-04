@@ -143,7 +143,7 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 			run := h.runs[s.runID]
 			h.mu.RUnlock()
 			if run != nil {
-				snap := run.Snapshot()
+				snap := run.SnapshotForPlayer(s.id)
 				return s.write(ctx, protocol.ServerMessage{Type: "match", Snapshot: &snap})
 			}
 		}
@@ -186,9 +186,9 @@ func (h *Hub) handle(ctx context.Context, s *Session, msg protocol.ClientMessage
 			}
 		}
 		h.mu.Unlock()
-		snap := run.Snapshot()
 		for _, t := range group {
 			if ss := h.session(t.PlayerID); ss != nil {
+				snap := run.SnapshotForPlayer(t.PlayerID)
 				_ = ss.write(ctx, protocol.ServerMessage{Type: "match", Snapshot: &snap})
 			}
 		}
@@ -435,7 +435,8 @@ func (h *Hub) step(ctx context.Context) {
 		}
 		for _, ps := range snap.Players {
 			if ss := h.session(ps.ID); ss != nil && ss.runID == r.ID {
-				_ = ss.write(ctx, protocol.ServerMessage{Type: "snapshot", Snapshot: &snap})
+				playerSnap := r.SnapshotForPlayer(ps.ID)
+				_ = ss.write(ctx, protocol.ServerMessage{Type: "snapshot", Snapshot: &playerSnap})
 			}
 		}
 	}

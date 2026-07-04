@@ -72,6 +72,33 @@ func TestRunProducesSnapshot(t *testing.T) {
 	}
 }
 
+func TestSnapshotForPlayerFiltersDistantEntities(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("interest", c, "verdant", 42)
+	r.AddPlayer("p1", "pilot", DefaultLoadout())
+	player := r.Entities[r.Players["p1"].EntityID]
+	player.Position = V(100, 100)
+	nearID := r.next()
+	r.Entities[nearID] = &Entity{ID: nearID, Kind: EntityEnemy, Position: player.Position.Add(V(120, 0)), Radius: 12, HP: 10, MaxHP: 10}
+	farID := r.next()
+	r.Entities[farID] = &Entity{ID: farID, Kind: EntityEnemy, Position: player.Position.Add(V(InterestRadius+500, 0)), Radius: 12, HP: 10, MaxHP: 10}
+	bossID := r.next()
+	r.Entities[bossID] = &Entity{ID: bossID, Kind: EntityBoss, Position: player.Position.Add(V(InterestRadius+900, 0)), Radius: 70, HP: 100, MaxHP: 100}
+	snap := r.SnapshotForPlayer("p1")
+	if !snapshotHasEntity(snap, nearID) {
+		t.Fatal("near enemy should be included")
+	}
+	if snapshotHasEntity(snap, farID) {
+		t.Fatal("far enemy should be filtered")
+	}
+	if !snapshotHasEntity(snap, bossID) {
+		t.Fatal("boss should stay visible for encounter awareness")
+	}
+}
+
 func TestSquadWipeFailsRunAndDropsCarriedLoot(t *testing.T) {
 	c, err := LoadCatalog("../../content/game.json")
 	if err != nil {
@@ -421,4 +448,13 @@ func enemyCount(r *RunState) int {
 		}
 	}
 	return count
+}
+
+func snapshotHasEntity(s Snapshot, id EntityID) bool {
+	for _, e := range s.Entities {
+		if e.ID == id {
+			return true
+		}
+	}
+	return false
 }

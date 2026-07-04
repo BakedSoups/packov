@@ -382,6 +382,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 12: Missing Multiplayer Scale Work
 
+- Status: server tick persistence still records full snapshots, but outbound match/snapshot messages now use `SnapshotForPlayer` interest filtering around each recipient while always including players and bosses. True entity deltas, compression, unreliable channels, and load testing remain.
 - Full snapshots are still the main network path; this will not scale to large player counts.
 - Need entity deltas: create/update/delete, quantized positions, and compressed state.
 - Need interest management by camera, party, objective, extraction zone, and boss arena.
