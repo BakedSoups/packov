@@ -272,6 +272,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 		entity := a.renderEntity(e)
 		a.drawEntity(screen, &entity)
 	}
+	a.drawCombatHUD(screen)
 	a.drawHUD(screen)
 }
 
@@ -338,7 +339,11 @@ func (a *App) drawEntity(screen *ebiten.Image, e *game.Entity) {
 	p := worldToScreen(a.camera, e.Position)
 	switch e.Kind {
 	case game.EntityPlayer:
-		drawOutlinedCircle(screen, p, e.Radius, color.RGBA{47, 178, 255, 255}, 5)
+		fill := color.RGBA{47, 178, 255, 255}
+		if a.recentHit(e, 10) {
+			fill = color.RGBA{255, 255, 255, 255}
+		}
+		drawOutlinedCircle(screen, p, e.Radius, fill, 5)
 		nose := []game.Vec2{
 			p.Add(game.FromAngle(e.Rotation).Mul(28)),
 			p.Add(game.FromAngle(e.Rotation + 2.55).Mul(15)),
@@ -355,10 +360,18 @@ func (a *App) drawEntity(screen *ebiten.Image, e *game.Entity) {
 		if sides == 0 {
 			sides = 3
 		}
-		drawPolygon(screen, p, e.Radius, sides, e.Rotation, color.RGBA{255, 91, 94, 235})
+		fill := color.RGBA{255, 91, 94, 235}
+		if a.recentHit(e, 8) {
+			fill = color.RGBA{255, 238, 238, 255}
+		}
+		drawPolygon(screen, p, e.Radius, sides, e.Rotation, fill)
 		drawHealth(screen, p, e)
 	case game.EntityBoss:
-		drawPolygon(screen, p, e.Radius, 8, e.Rotation, color.RGBA{199, 86, 255, 235})
+		fill := color.RGBA{199, 86, 255, 235}
+		if a.recentHit(e, 8) {
+			fill = color.RGBA{255, 238, 255, 255}
+		}
+		drawPolygon(screen, p, e.Radius, 8, e.Rotation, fill)
 		vector.StrokeCircle(screen, float32(p.X), float32(p.Y), float32(e.Radius+18+float64(e.Phase)*12), 3, color.RGBA{255, 210, 84, 180}, false)
 		for i := 0; i < 4+e.Phase; i++ {
 			ang := e.Rotation + float64(i)*math.Pi*2/float64(4+e.Phase)
@@ -382,15 +395,63 @@ func (a *App) drawHUD(screen *ebiten.Image) {
 		"WASD move  Mouse aim/fire  Space ability  E extract",
 		fmt.Sprintf("Tick %d  Entities %d  Runtime %s  Net %s", a.run.Tick, len(a.run.Entities), time.Since(a.started).Truncate(time.Second), a.status),
 	}
-	if ps != nil {
-		if e := a.run.Entities[ps.EntityID]; e != nil {
-			lines = append(lines, fmt.Sprintf("Hull %.0f/%.0f  Shield %.0f  Carried %v", e.HP, e.MaxHP, e.Shield, ps.Carried.Items))
-		}
-	}
 	if len(a.run.Messages) > 0 {
 		lines = append(lines, a.run.Messages[len(a.run.Messages)-1])
 	}
 	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 18, 18)
+	_ = ps
+}
+
+func (a *App) drawCombatHUD(screen *ebiten.Image) {
+	ps := a.run.Players[a.player]
+	if ps == nil {
+		return
+	}
+	player := a.run.Entities[ps.EntityID]
+	if player == nil {
+		return
+	}
+	if player.HP/player.MaxHP < 0.28 && a.run.Tick%20 < 10 {
+		vector.StrokeRect(screen, 8, 8, screenW-16, screenH-16, 8, color.RGBA{255, 91, 94, 190}, false)
+	}
+	drawBar(screen, 28, screenH-72, 360, 22, player.HP/player.MaxHP, color.RGBA{80, 205, 104, 255}, "HULL")
+	drawBar(screen, 28, screenH-42, 360, 14, math.Min(1, player.Shield/100), color.RGBA{47, 178, 255, 255}, "SHIELD")
+	value := a.carriedValue(ps)
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("CARRIED %d cr  %v", value, ps.Carried.Items), 410, screenH-68)
+	if boss := a.primaryBoss(); boss != nil {
+		drawBar(screen, screenW/2-240, 24, 480, 18, boss.HP/boss.MaxHP, color.RGBA{199, 86, 255, 255}, strings.ToUpper(a.catalog.BossByID[boss.DefID].Name))
+	}
+}
+
+func drawBar(screen *ebiten.Image, x, y, w, h float32, pct float64, fill color.RGBA, label string) {
+	pct = math.Max(0, math.Min(1, pct))
+	vector.DrawFilledRect(screen, x-4, y-4, w+8, h+8, outlineColor(), false)
+	vector.DrawFilledRect(screen, x, y, w, h, color.RGBA{255, 255, 255, 245}, false)
+	vector.DrawFilledRect(screen, x, y, w*float32(pct), h, fill, false)
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%s %.0f%%", label, pct*100), int(x+8), int(y+2))
+}
+
+func (a *App) carriedValue(ps *game.PlayerState) int {
+	total := 0
+	for item, count := range ps.Carried.Items {
+		if loot, ok := a.catalog.LootByID[item]; ok {
+			total += loot.BaseValue * count
+		}
+	}
+	return total
+}
+
+func (a *App) primaryBoss() *game.Entity {
+	for _, e := range a.run.Entities {
+		if e.Kind == game.EntityBoss {
+			return e
+		}
+	}
+	return nil
+}
+
+func (a *App) recentHit(e *game.Entity, ticks uint64) bool {
+	return e.HitTick > 0 && a.run.Tick >= e.HitTick && a.run.Tick-e.HitTick <= ticks
 }
 
 func drawHealth(screen *ebiten.Image, p game.Vec2, e *game.Entity) {

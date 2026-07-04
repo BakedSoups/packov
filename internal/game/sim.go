@@ -39,6 +39,7 @@ type Entity struct {
 	AIState     string     `json:"ai_state,omitempty"`
 	StateTick   uint64     `json:"state_tick,omitempty"`
 	NextAction  uint64     `json:"next_action,omitempty"`
+	HitTick     uint64     `json:"hit_tick,omitempty"`
 }
 
 type PlayerState struct {
@@ -530,11 +531,13 @@ func (r *RunState) resolveCombat(c *Catalog) {
 			}
 			if b.Owner != "" && (target.Kind == EntityEnemy || target.Kind == EntityBoss) && Dist(b.Position, target.Position) < b.Radius+target.Radius {
 				target.HP -= b.Damage
+				target.HitTick = r.Tick
 				b.TTL = -1
 				break
 			}
 			if b.Owner == "" && target.Kind == EntityPlayer && Dist(b.Position, target.Position) < b.Radius+target.Radius {
 				target.HP -= math.Max(0, b.Damage-target.Shield*0.2)
+				target.HitTick = r.Tick
 				b.TTL = -1
 				break
 			}
@@ -561,6 +564,7 @@ func (r *RunState) resolveCombat(c *Catalog) {
 					hostile.NextAction = r.Tick + uint64(TickRate)
 				}
 				player.HP -= math.Max(1, damage-player.Shield*0.02)
+				player.HitTick = r.Tick
 				if player.HP <= 0 {
 					ps.Downed = true
 					ps.Carried = NewInventory()

@@ -187,6 +187,30 @@ func TestEnemyMeleeDamageIsCooldownGated(t *testing.T) {
 	}
 }
 
+func TestCombatSetsHitTicks(t *testing.T) {
+	c, err := LoadCatalog("../../content/game.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRun("hits", c, "verdant", 42)
+	r.AddPlayer("p1", "pilot", DefaultLoadout())
+	def := c.EnemyByID["skitter"]
+	r.spawnEnemy(def, V(520, 500))
+	player := r.Entities[r.Players["p1"].EntityID]
+	player.Position = V(500, 500)
+	r.Tick = 12
+	for _, e := range r.Entities {
+		if e.Kind == EntityEnemy {
+			e.AIState = AILunge
+			e.StateTick = 8
+		}
+	}
+	r.resolveCombat(c)
+	if player.HitTick != 12 {
+		t.Fatalf("expected player hit tick 12, got %d", player.HitTick)
+	}
+}
+
 func enemyMinDistance(r *RunState) float64 {
 	best := math.MaxFloat64
 	for _, a := range r.Entities {

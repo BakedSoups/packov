@@ -53,6 +53,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 2: Health and Combat Readability
 
+- Status: prominent player hull/shield HUD, boss health bar, carried value, low-health border, and hit flashes are implemented from authoritative hit ticks.
 - Add a prominent player health/shield bar near the bottom or top of the screen.
 - Keep small health bars over enemies, but make boss health a large fixed UI element.
 - Add damage flash on the player hull when hit.
