@@ -470,7 +470,16 @@ func (a *App) drawInventory(screen *ebiten.Image) {
 func (a *App) drawCrafting(screen *ebiten.Image) {
 	drawLargeText(screen, "CRAFTING", 72, 108)
 	lines := []string{}
-	for i, recipe := range a.catalog.Recipes {
+	start := visibleRecipeStart(a.menu.CraftIdx, len(a.catalog.Recipes), 10)
+	end := start + 10
+	if end > len(a.catalog.Recipes) {
+		end = len(a.catalog.Recipes)
+	}
+	if start > 0 {
+		lines = append(lines, "  ...")
+	}
+	for i := start; i < end; i++ {
+		recipe := a.catalog.Recipes[i]
 		prefix := "  "
 		if i == a.menu.CraftIdx {
 			prefix = "> "
@@ -481,10 +490,14 @@ func (a *App) drawCrafting(screen *ebiten.Image) {
 		}
 		lines = append(lines, fmt.Sprintf("%s%-13s %-18s %s", prefix, strings.ToUpper(recipe.Category), recipeName(recipe), state))
 	}
+	if end < len(a.catalog.Recipes) {
+		lines = append(lines, "  ...")
+	}
 	if len(lines) == 0 {
 		lines = append(lines, "No recipes loaded")
 	}
 	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 82, 220)
+	a.drawCraftingBranch(screen)
 	a.drawRecipeDetail(screen)
 	footer := "Enter selects    Esc returns"
 	if a.menu.CraftConfirm {
@@ -521,7 +534,11 @@ func (a *App) drawRecipeDetail(screen *ebiten.Image) {
 		}
 		vector.DrawFilledRect(screen, x, rowY+2, 16, 16, clr, false)
 		vector.StrokeRect(screen, x, rowY+2, 16, 16, 2, outlineColor(), false)
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%s  %d / %d", a.lootName(item), have, need), int(x+26), int(rowY))
+		row := fmt.Sprintf("%s  %d / %d", a.lootName(item), have, need)
+		if have < need {
+			row += "  Find: " + compactText(a.lootSource(item), 25)
+		}
+		ebitenutil.DebugPrintAt(screen, row, int(x+26), int(rowY))
 		rowY += 28
 	}
 	ebitenutil.DebugPrintAt(screen, "SOURCE  "+valueOr(recipe.Source, "gameplay drops"), int(x), int(y+250))
@@ -533,6 +550,68 @@ func (a *App) drawRecipeDetail(screen *ebiten.Image) {
 		vector.DrawFilledRect(screen, x+300, y+312, 220, 30, color.RGBA{247, 205, 92, 240}, false)
 		vector.StrokeRect(screen, x+300, y+312, 220, 30, 3, outlineColor(), false)
 		ebitenutil.DebugPrintAt(screen, "CONFIRM CRAFT", int(x+316), int(y+320))
+	}
+}
+
+func visibleRecipeStart(selected, total, visible int) int {
+	if total <= visible {
+		return 0
+	}
+	start := selected - visible/2
+	if start < 0 {
+		return 0
+	}
+	if start+visible > total {
+		return total - visible
+	}
+	return start
+}
+
+func (a *App) drawCraftingBranch(screen *ebiten.Image) {
+	if len(a.catalog.Recipes) == 0 || a.menu.CraftIdx >= len(a.catalog.Recipes) {
+		return
+	}
+	selected := a.catalog.Recipes[a.menu.CraftIdx]
+	nodes := make([]game.RecipeDef, 0, 6)
+	for _, recipe := range a.catalog.Recipes {
+		if recipe.Category == selected.Category {
+			nodes = append(nodes, recipe)
+		}
+	}
+	if len(nodes) == 0 {
+		return
+	}
+	x := float32(82)
+	y := float32(480)
+	w := float32(410)
+	vector.DrawFilledRect(screen, x-14, y-32, w+28, 74, color.RGBA{16, 25, 34, 210}, false)
+	vector.StrokeRect(screen, x-14, y-32, w+28, 74, 4, outlineColor(), false)
+	ebitenutil.DebugPrintAt(screen, strings.ToUpper(selected.Category)+" TREE", int(x), int(y-24))
+	step := w
+	if len(nodes) > 1 {
+		step = w / float32(len(nodes)-1)
+	}
+	for i := range nodes {
+		cx := x + float32(i)*step
+		if i > 0 {
+			px := x + float32(i-1)*step
+			vector.StrokeLine(screen, px+18, y, cx-18, y, 5, color.RGBA{45, 62, 76, 255}, false)
+		}
+	}
+	for i, recipe := range nodes {
+		cx := x + float32(i)*step
+		fill := color.RGBA{255, 91, 94, 255}
+		if a.account != nil && a.account.Unlocks[recipe.Output] {
+			fill = color.RGBA{103, 228, 155, 255}
+		} else if a.canCraft(recipe) {
+			fill = color.RGBA{247, 205, 92, 255}
+		}
+		if recipe.ID == selected.ID {
+			vector.DrawFilledCircle(screen, cx, y, 22, color.RGBA{245, 249, 255, 255}, false)
+		}
+		vector.DrawFilledCircle(screen, cx, y, 16, fill, false)
+		vector.StrokeCircle(screen, cx, y, 16, 4, outlineColor(), false)
+		ebitenutil.DebugPrintAt(screen, compactText(recipeName(recipe), 12), int(cx-42), int(y+24))
 	}
 }
 
@@ -564,6 +643,23 @@ func (a *App) lootName(item string) string {
 		return loot.Name
 	}
 	return item
+}
+
+func (a *App) lootSource(item string) string {
+	if loot, ok := a.catalog.LootByID[item]; ok && loot.Source != "" {
+		return loot.Source
+	}
+	return "gameplay drops"
+}
+
+func compactText(value string, max int) string {
+	if len(value) <= max {
+		return value
+	}
+	if max <= 3 {
+		return value[:max]
+	}
+	return value[:max-3] + "..."
 }
 
 func (a *App) canCraft(recipe game.RecipeDef) bool {
