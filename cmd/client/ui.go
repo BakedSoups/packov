@@ -26,6 +26,7 @@ const (
 	screenInventory
 	screenCrafting
 	screenMarketplace
+	screenProfile
 	screenSettings
 	screenResult
 	screenRun
@@ -44,7 +45,7 @@ type menuState struct {
 
 var (
 	titleItems    = []string{"Enter Station", "Edit Character", "Settings", "Local Test Run"}
-	stationItems  = []string{"Deploy", "Loadout", "Inventory", "Crafting", "Marketplace", "Character", "Settings", "Title"}
+	stationItems  = []string{"Deploy", "Loadout", "Inventory", "Crafting", "Marketplace", "Profile", "Character", "Settings", "Title"}
 	characterRows = []string{"Primary", "Secondary", "Trail", "Nose", "Drone Skin", "Badge"}
 	settingsRows  = []string{"Mouse Aim", "Controller", "Damage Numbers", "Screen Shake", "Back"}
 	colorOptions  = []string{"cyan", "white", "amber", "green", "violet", "red"}
@@ -83,6 +84,8 @@ func (a *App) updateMenu() {
 			case "Marketplace":
 				a.screen = screenMarketplace
 				a.requestMarket()
+			case "Profile":
+				a.screen = screenProfile
 			case "Character":
 				a.screen = screenCharacter
 			case "Settings":
@@ -105,6 +108,10 @@ func (a *App) updateMenu() {
 		a.updateMarketplace()
 	case screenCrafting:
 		a.updateCrafting()
+	case screenProfile:
+		if a.justPressed(ebiten.KeyEscape) || a.justPressed(ebiten.KeyEnter) || a.justPressed(ebiten.KeySpace) {
+			a.screen = screenStation
+		}
 	case screenSettings:
 		a.updateList(len(settingsRows), func() {
 			if settingsRows[a.menu.Index] == "Back" {
@@ -439,6 +446,8 @@ func (a *App) drawMenu(screen *ebiten.Image) {
 		a.drawCrafting(screen)
 	case screenMarketplace:
 		a.drawMarketplace(screen)
+	case screenProfile:
+		a.drawProfile(screen)
 	case screenSettings:
 		a.drawSettings(screen)
 	case screenResult:
@@ -784,6 +793,47 @@ func (a *App) drawMarketplace(screen *ebiten.Image) {
 		lines = append(lines, fmt.Sprintf("%s%s x%d @ %d%s", prefix, listing.ItemID, listing.Quantity, listing.UnitPrice, owner))
 	}
 	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 82, 220)
+	ebitenutil.DebugPrintAt(screen, "Enter returns", 82, 560)
+}
+
+func (a *App) drawProfile(screen *ebiten.Image) {
+	drawLargeText(screen, "PROFILE", 72, 108)
+	lines := []string{}
+	if a.account == nil {
+		lines = append(lines, "No account loaded")
+	} else {
+		unlocks := make([]string, 0, len(a.account.Unlocks))
+		for unlock, owned := range a.account.Unlocks {
+			if owned {
+				unlocks = append(unlocks, unlock)
+			}
+		}
+		sort.Strings(unlocks)
+		if len(unlocks) > 10 {
+			unlocks = unlocks[:10]
+		}
+		lines = append(lines,
+			"Callsign: "+valueOr(a.look.Callsign, string(a.account.ID)),
+			fmt.Sprintf("Credits: %d", a.account.Credits),
+			fmt.Sprintf("Level: %d", a.account.Level),
+			fmt.Sprintf("Unlocks owned: %d", len(a.account.Unlocks)),
+			fmt.Sprintf("Cosmetics owned: %d", len(a.account.Cosmetics)),
+			"Equipped weapon: "+a.weaponName(a.loadout.WeaponID),
+			"Equipped ability: "+a.abilityName(a.loadout.AbilityID),
+			"Equipped hull: "+a.loadout.HullID,
+			"",
+			"Recent unlocks",
+		)
+		if len(unlocks) == 0 {
+			lines = append(lines, "none")
+		} else {
+			lines = append(lines, unlocks...)
+		}
+	}
+	vector.DrawFilledRect(screen, 72, 190, 470, 360, color.RGBA{18, 28, 38, 225}, false)
+	vector.StrokeRect(screen, 72, 190, 470, 360, 4, outlineColor(), false)
+	ebitenutil.DebugPrintAt(screen, strings.Join(lines, "\n"), 100, 218)
+	a.drawShipPreview(screen, game.V(870, 360), 1.45)
 	ebitenutil.DebugPrintAt(screen, "Enter returns", 82, 560)
 }
 

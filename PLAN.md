@@ -357,7 +357,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 10: Missing Station and UX Flow
 
-- Status: station deploy now opens a planet selection screen instead of hardcoding Verdant-9; planet details show threat, biome, resources, boss, hazards, event hook text, and daily/weekly mission panels. Remote queue requests validate planet IDs server-side. Party readiness, boss rotation timers, and richer profile/missions pages remain.
+- Status: station deploy now opens a planet selection screen instead of hardcoding Verdant-9; planet details show threat, biome, resources, boss, hazards, event hook text, and daily/weekly mission panels. Remote queue requests validate planet IDs server-side. Station also has a profile screen with account progression, unlock/cosmetic counts, current loadout, and ship preview. Party readiness, boss rotation timers, and richer missions pages remain.
 - Title/login flow needs player naming, account token visibility, and reconnect feedback.
 - Station needs a clearer information hierarchy: deploy, loadout, inventory, crafting, market, profile, missions.
 - Loadout screen needs stat comparisons and sidegrade tradeoff explanations.
