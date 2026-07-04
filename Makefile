@@ -15,6 +15,7 @@ wasm:
 
 ci:
 	go test ./internal/game ./internal/protocol ./internal/server ./cmd/server
+	go run ./cmd/contentcheck content/game.json
 	GOOS=js GOARCH=wasm go build -o /tmp/packov-game.wasm ./cmd/client
 
 docker-check:

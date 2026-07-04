@@ -394,6 +394,7 @@ This file captures the current hands-on gameplay notes and the next improvements
 
 ## Priority 13: Missing Content Pipeline
 
+- Status: dedicated `cmd/contentcheck` validates the data-driven catalog through shared catalog loading/validation and is wired into `make ci`. Splitting content into multiple designer-facing files, schema versioning, migrations, hot reload, and debug spawn/grant commands remain.
 - Content files need schema validation and tests.
 - Need separate data files for weapons, abilities, enemies, bosses, loot, recipes, planets, events, cosmetics, and missions.
 - Need designer-friendly balancing fields: budget, role, counters, rarity, unlock source, event tags.
